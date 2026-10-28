@@ -1,0 +1,52 @@
+{
+  "signal": [
+    {
+      "name": "tb_rv_stage.clk (posedge)",
+      "wave": "pppppp"
+    },
+    {
+      "name": "tb_rv_stage.rst_n",
+      "wave": "01...."
+    },
+    {
+      "name": "tb_rv_stage.in_valid",
+      "wave": "01..0."
+    },
+    {
+      "name": "tb_rv_stage.in_data",
+      "wave": "===...",
+      "data": [
+        "0x0",
+        "0xa5",
+        "0x3c"
+      ]
+    },
+    {
+      "name": "tb_rv_stage.in_ready",
+      "wave": "10.1.."
+    },
+    {
+      "name": "tb_rv_stage.out_ready",
+      "wave": "0..1.."
+    },
+    {
+      "name": "tb_rv_stage.out_valid",
+      "wave": "01..0."
+    },
+    {
+      "name": "tb_rv_stage.out_data",
+      "wave": "==.=..",
+      "data": [
+        "0x0",
+        "0xa5",
+        "0x3c"
+      ]
+    }
+  ],
+  "head": {
+    "text": "ILLUSTRATIVE — NOT SIMULATED — one-entry ready/valid stall"
+  },
+  "config": {
+    "hscale": 1
+  }
+}

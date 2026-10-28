@@ -1,0 +1,18 @@
+{
+  "status": "NO_MISMATCH_IN_SELECTED_CYCLES",
+  "expected": "/mnt/data/rtl-to-spec/examples/demo_output/waveforms/accept_stall_illustrative.json5",
+  "observed": "/mnt/data/rtl-to-spec/examples/demo_output/waveforms/fixture_trace.json5",
+  "signals": [
+    "tb_rv_stage.rst_n",
+    "tb_rv_stage.in_valid",
+    "tb_rv_stage.in_data",
+    "tb_rv_stage.in_ready",
+    "tb_rv_stage.out_ready",
+    "tb_rv_stage.out_valid",
+    "tb_rv_stage.out_data"
+  ],
+  "matching_cells": 42,
+  "mismatches": [],
+  "inconclusive_cells": [],
+  "disclaimer": "Requires aligned cycles/clock semantics; matching values do not establish functional correctness."
+}

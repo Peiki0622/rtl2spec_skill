@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "mode": "strict",
+  "docs": "/mnt/data/rtl-to-spec/examples/demo_output",
+  "errors": [],
+  "warnings": [],
+  "checks": [
+    "source snapshot match: rv_stage.v",
+    "ip_spec.md: required section and citation lint completed",
+    "rv_stage.md: required section and citation lint completed",
+    "waveform parsed: accept_stall_illustrative.json5",
+    "waveform parsed: fixture_trace.json5"
+  ],
+  "disclaimer": "Lint checks structure and file-line existence; not functional correctness."
+}

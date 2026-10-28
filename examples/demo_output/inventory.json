@@ -1,0 +1,82 @@
+{
+  "format_version": 1,
+  "root": "/mnt/data/rtl-to-spec/examples/tiny_ip",
+  "filelist": "/mnt/data/rtl-to-spec/examples/tiny_ip/rtl.f",
+  "include_dirs": [],
+  "defines": [],
+  "files": [
+    {
+      "path": "rv_stage.v",
+      "sha256": "46a5f58a7b55ff6dee8f523c91ecd0044c83740812a1b0bcbfafe0415222a60e",
+      "lines": 27,
+      "modules": [
+        "rv_stage"
+      ],
+      "kind": ".v"
+    }
+  ],
+  "modules": [
+    {
+      "name": "rv_stage",
+      "file": "rv_stage.v",
+      "line": 2,
+      "end_line": 27,
+      "parameters": [
+        {
+          "name": "WIDTH",
+          "default_expr": "8"
+        }
+      ],
+      "ports": [
+        {
+          "name": "clk",
+          "direction": "input",
+          "width_expr": "1"
+        },
+        {
+          "name": "rst_n",
+          "direction": "input",
+          "width_expr": "1"
+        },
+        {
+          "name": "in_data",
+          "direction": "input",
+          "width_expr": "[WIDTH-1:0]"
+        },
+        {
+          "name": "in_valid",
+          "direction": "input",
+          "width_expr": "1"
+        },
+        {
+          "name": "in_ready",
+          "direction": "output",
+          "width_expr": "1"
+        },
+        {
+          "name": "out_data",
+          "direction": "output",
+          "width_expr": "[WIDTH-1:0]"
+        },
+        {
+          "name": "out_valid",
+          "direction": "output",
+          "width_expr": "1"
+        },
+        {
+          "name": "out_ready",
+          "direction": "input",
+          "width_expr": "1"
+        }
+      ],
+      "instantiations": [],
+      "analysis_level": "lexical-candidate"
+    }
+  ],
+  "top_candidates": [
+    "rv_stage"
+  ],
+  "warnings": [
+    "Lexical/heuristic inventory only: not SystemVerilog elaboration, width resolution, or functional proof."
+  ]
+}

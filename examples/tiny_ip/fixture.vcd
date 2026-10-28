@@ -1,0 +1,60 @@
+$date synthetic example only $end
+$version handwritten VCD fixture (NOT simulated) $end
+$timescale 1ns $end
+$scope module tb_rv_stage $end
+$var wire 1 ! clk $end
+$var wire 1 " rst_n $end
+$var wire 1 # in_valid $end
+$var wire 8 % in_data [7:0] $end
+$var wire 1 $ in_ready $end
+$var wire 1 & out_valid $end
+$var wire 1 ' out_ready $end
+$var wire 8 ( out_data [7:0] $end
+$upscope $end
+$enddefinitions $end
+
+#0
+0!
+0"
+0#
+b00000000 %
+1$
+0&
+0'
+b00000000 (
+#5
+1!
+#10
+0!
+#12
+1"
+#13
+1#
+b10100101 %
+#15
+1!
+0$
+1&
+b10100101 (
+#20
+0!
+b00111100 %
+#25
+1!
+#30
+0!
+1'
+1$
+#35
+1!
+b00111100 (
+#40
+0!
+0#
+#45
+1!
+0&
+#50
+0!
+#55
+1!
