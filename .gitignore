@@ -1,0 +1,15 @@
+# Confidential/vendor-generated EDA outputs; never commit user RTL verification data
+/docs/
+**/*.fsdb
+**/*.vpd
+**/*.vdb/
+**/*.daidir/
+**/csrc/
+**/simv
+**/ucli.key
+**/novas_dump.log
+**/__pycache__/
+**/*.pyc
+*.log
+# The committed examples/tiny_ip/fixture.vcd is intentionally a synthetic fixture;
+# real project VCD files live in docs/ and are ignored by the first rule.

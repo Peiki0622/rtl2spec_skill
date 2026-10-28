@@ -1,4 +1,4 @@
 interface:
-  display_name: "RTL to Spec"
-  short_description: "Reverse RTL into detailed IP specs and timing diagrams"
-  default_prompt: "Use $rtl-to-spec to inspect my RTL hierarchy without modifying it, generate a detailed implementation specification, and include explicitly labeled WaveDrom timing examples and source-line evidence."
+  display_name: "RTL to Formal IP Spec"
+  short_description: "Document RTL as a formal IP Spec using VCS + Verdi"
+  default_prompt: "Use $rtl-to-spec to read my RTL without modifying it, produce a revision-controlled formal IP Specification with numbered chapters, port/register tables, source-line citations, cycle-accurate WaveDrom figures, and Synopsys VCS/Verdi evidence when available. Do not claim EDA passes unless actually run and checked."

@@ -212,11 +212,39 @@ def main():
     p.add_argument('--end', type=int, help='Ending VCD timestamp in VCD ticks')
     p.add_argument('--out', type=Path, required=True, help='WaveDrom .json5 file (strict JSON syntax)')
     p.add_argument('--svg', type=Path, help='Optional SVG rendered with bundled WaveDrom-subset renderer')
+    p.add_argument('--verdi-manifest', type=Path, help='Successful fsdb2vcd manifest from vcs_verdi.py')
+    p.add_argument('--vcs-run-manifest', type=Path, help='Successful VCS run manifest, required with --verdi-manifest')
     args = p.parse_args()
+    if bool(args.verdi_manifest) != bool(args.vcs_run_manifest):
+        p.error('Supply BOTH --verdi-manifest and --vcs-run-manifest to label VCS/Verdi provenance')
     try:
         diagram, meta = convert(args.vcd, args.clock, args.signals, args.cycles, args.start, args.end)
     except (ValueError, OSError) as ex:
         p.error(str(ex))
+    if args.verdi_manifest:
+        try:
+            conversion = json.loads(args.verdi_manifest.read_text(encoding='utf-8'))
+            run = json.loads(args.vcs_run_manifest.read_text(encoding='utf-8'))
+            if conversion.get('stage') != 'convert' or run.get('stage') != 'run':
+                raise ValueError('Expected convert/run stage manifests')
+            if not all(m.get('executed') and m.get('status') == 'PROCESS_EXIT_0_UNQUALIFIED'
+                       for m in (conversion, run)):
+                raise ValueError('VCS/Verdi commands did not finish with process exit 0')
+            if conversion.get('vcd_sha256') != meta['vcd_sha256']:
+                raise ValueError('Verdi conversion manifest hash differs from the supplied VCD')
+            if not conversion.get('fsdb_sha256') or conversion['fsdb_sha256'] != run.get('fsdb_sha256'):
+                raise ValueError('FSDB hash is missing or differs between VCS and Verdi manifests')
+            if not run.get('fsdb_exists'):
+                raise ValueError('VCS run manifest lacks FSDB output evidence')
+            diagram['head']['text'] = 'VCS/VERDI OBSERVED — NOT A CORRECTNESS PROOF'
+            meta['provenance'] = 'VCS/VERDI-OBSERVED (command/hash chain, no functional proof)'
+            meta['fsdb_sha256'] = conversion['fsdb_sha256']
+            meta['fsdb_path'] = conversion.get('fsdb')
+            meta['verdi_manifest'] = str(args.verdi_manifest.resolve())
+            meta['vcs_run_manifest'] = str(args.vcs_run_manifest.resolve())
+            meta['functional_correctness'] = 'UNVERIFIED — inspect self-checking TB assertions/results'
+        except (OSError, ValueError, KeyError, json.JSONDecodeError) as ex:
+            p.error(f'Verdi/VCS provenance check failed: {ex}')
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(diagram, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     metadata_path = args.out.with_suffix('.meta.json')

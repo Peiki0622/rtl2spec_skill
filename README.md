@@ -1,114 +1,124 @@
-# RTL-to-Spec — Codex Skill（中文使用指南）
+# rtl-to-spec v0.2.0 — Codex Formal IP Specification Skill
 
-> 仓库：[Peiki0622/rtl2spec_skill](https://github.com/Peiki0622/rtl2spec_skill)。可将仓库根目录复制到 `~/.agents/skills/rtl-to-spec` 或项目的 `.agents/skills/rtl-to-spec`。
+将现有 Verilog/SystemVerilog RTL **反向生成正式的、可审阅的 IP Specification**，包括编号章节、修订历史、文档控制、架构、顶层接口、时钟复位、模块状态、寄存器/存储器映射、周期级协议时序、WaveDrom/SVG 时序图、验证证据矩阵及源码追溯。
 
-将已有 **Verilog/SystemVerilog RTL** 反向整理为设计实际实现的 IP/模块规格文档，包含模块层次、参数/接口、时钟复位、状态机、周期级行为、WaveDrom 示例波形和可选 VCD 观测波形。**不会自动修改 RTL**。
+**EDA 主链指定为 Synopsys VCS + Synopsys Verdi**：VCS 负责编译/展开与仿真，Verdi 负责 FSDB 浏览/波形分析及通过 `fsdb2vcd` 导出给文档图片生成器。没有安装许可证也能用静态分析生成 `DRAFT` 文档，但不得声称完成 VCS 仿真或 Verdi 检查。该 Skill 是 Agent 指令与自有辅助脚本的组合，不是第三方商业 EDA 软件的开源替代品。
 
-> 这是一个可供 Codex 调用的 **Agent Skill**，不是声称可以不经过 Codex 语义分析就从任意 RTL 一键生成准确 Spec 的独立综合软件。脚本完成确定性的辅助工作；完整规格需要 Codex 逐模块分析。
-
-## 安装（任选一种）
-
-直接克隆仓库，然后将仓库目录放入 Codex Skill 搜索路径（目录最后一级应为 `rtl-to-spec`）。
+## 安装到 Codex
 
 ```bash
-git clone https://github.com/Peiki0622/rtl2spec_skill.git rtl-to-spec
+# 克隆本仓库
 mkdir -p ~/.agents/skills
-cp -R rtl-to-spec ~/.agents/skills/
+git clone https://github.com/Peiki0622/rtl2spec_skill.git ~/.agents/skills/rtl-to-spec
+# 或将仓库放在目标 RTL 工程下的 .agents/skills/rtl-to-spec/
 ```
 
-项目级安装：
-
-```bash
-mkdir -p /path/to/your-rtl-project/.agents/skills
-cp -R rtl-to-spec /path/to/your-rtl-project/.agents/skills/
-```
-
-在 Codex 中使用 `$rtl-to-spec`；若列表未刷新，请重新启动 Codex 会话。
-
-## 调用方式
-
-在 RTL 工程根目录启动 Codex，发送：
+进入 RTL 项目目录，使用 Codex：
 
 ```text
-使用 $rtl-to-spec 分析我的整个 RTL 工程，Top 为 sm4_top。
-以现有 RTL 为准，不得修改源代码。输出详细中文 IP Implementation Specification
-到 docs/rtl_spec，必须包含模块层次、寄存器与 FSM、接口表、真实周期延迟、
-复位/正常事务/连续事务/阻塞等实际存在的示例 WaveDrom/SVG 时序波形。
-请对关键结论引用 RTL 文件:行号；如果已有 testbench 则运行仿真生成 VCD，
-并将仿真观测波形和静态推导示意波形区分开。
+使用 $rtl-to-spec 为当前项目生成正式的中文 IP Specification，Top 为 my_dut。
+不要修改 RTL。使用真实 filelist/宏/参数，生成编号的 IP 与模块文档、
+完整端口表、架构、寄存器/状态机及所有支持场景的周期级 WaveDrom 图。
+EDA 优先且必须采用 Synopsys VCS + Verdi；若许可证可用，运行真实 TB，
+使用 FSDB/Verdi 形成验证证据；不可用则标注 NOT RUN，严禁伪称通过。
+每项关键结论给出源码路径和行号，最终输出 docs/rtl_spec/。
 ```
 
-**注意：**`sm4_top` 仅是调用示例，请替换为项目实际 Top。若不清楚 Top，要求 Codex 根据 filelist 与实例关系明确候选并确认；不要从文件名凭空猜。
+## 正式文档固定章节
 
-## 工作流 / 自动化工具
+**IP Spec（`ip_spec.md`）：**
 
-脚本依赖 Python **3.10+ 标准库**，不需要联网。假设 Skill 已复制到 `.agents/skills/rtl-to-spec`：
+| 序号 | 固定章节（正文可用中文） | 主要内容 |
+| --- | --- | --- |
+| 1 | Document Control | 文档号、版本、状态、修订历史、审批 |
+| 2 | Scope and References | 文档边界、技术参考 |
+| 3 | IP Overview and Features | IP 功能特性与限制 |
+| 4 | Configuration and Deliverables | 编译参数、filelist、交付项 |
+| 5 | Architecture and Hierarchy | IP 架构/模块层次/数据流 |
+| 6 | External Interface Specification | 全量端口与接口时序协议 |
+| 7 | Clocks, Resets and CDC | 时钟域、复位、CDC 假设 |
+| 8 | Functional Operation | 各种工作模式与内部算法 |
+| 9 | Timing and Waveform Scenarios | 正常、复位、连续、阻塞、异常等时序图 |
+| 10 | Register and Memory Map | 软件可见寄存器/地址/存储器；没有则注明 N/A |
+| 11 | Exceptions, Constraints and Integration | 异常、系统集成与使用限制 |
+| 12 | Verification and Evidence | VCS/Verdi 编译、仿真、FSDB、断言证据 |
+| 13 | Traceability and Open Issues | Spec → RTL 的源代码映射与问题清单 |
+| A/B | Module Index / Glossary | 模块文档目录与术语 |
+
+每个模块使用独立的九章 Module Design Specification。所有关键图表采用 `Figure 9-1` / `Table 6-1` 这种章节内编号。**详细格式请看** [`references/spec-contract.md`](references/spec-contract.md)，模板位于 `assets/templates/`。
+
+## EDA 使用：VCS + Verdi
+
+**准备：** VCS/Verdi 必须由用户所在 EDA 环境安装并授权；建议配置 `VERDI_HOME`。Skill 不包含也不会安装商业软件。建议有实际可编译 filelist 与 testbench。
 
 ```bash
-SKILL=.agents/skills/rtl-to-spec
+SKILL=~/.agents/skills/rtl-to-spec
 python3 "$SKILL/scripts/doctor.py"
-python3 "$SKILL/scripts/inventory.py" --root . --out docs/rtl_spec/inventory.json
-# 对有编译列表的工程，推荐：... --filelist rtl.f
+python3 "$SKILL/scripts/vcs_verdi.py" doctor
+
+# 在 RTL 项目根目录复制示例配置（放在项目根目录，方便解析相对路径）
+cp "$SKILL/assets/templates/vcs_verdi_config.json" vcs_verdi.json
+# 修改 filelist、tb_top、dut_top、output_dir、编译参数等字段
+python3 "$SKILL/scripts/vcs_verdi.py" --config vcs_verdi.json plan
+
+# 以下需要真实 VCS + Verdi 和授权；显式 --execute 才实际调用
+python3 "$SKILL/scripts/vcs_verdi.py" --config vcs_verdi.json --execute compile
+python3 "$SKILL/scripts/vcs_verdi.py" --config vcs_verdi.json --execute run
+python3 "$SKILL/scripts/vcs_verdi.py" --config vcs_verdi.json --execute convert
+
+# 如果需要人工 Verdi 查看 FSDB（GUI / DISPLAY 必须可用）
+python3 "$SKILL/scripts/vcs_verdi.py" --config vcs_verdi.json --execute open
+```
+
+默认配置使用 VCS UCLI `call {$fsdbDumpfile(...)}; call {$fsdbDumpvars(0, TB_TOP)}` 导出 FSDB，不修改原 RTL。若项目 TB 已自行导出 FSDB，设置 `fsdb_dump_mode: "testbench"`；必须保证 FSDB 输出路径与配置一致。需根据公司 VCS 版本和项目脚本调整选项。日志和运行/转换 manifest 在 `docs/rtl_spec/eda/`。**所有实际运行的进程状态仅记录为 PROCESS_EXIT_0_UNQUALIFIED 或失败**，必须结合自检查断言/scoreboard 判定测试是否通过。
+
+真实 FSDB 用 Verdi `fsdb2vcd` 转换后（避免转换不必要的超大波形区间），可生成文档示例图：
+
+```bash
+python3 "$SKILL/scripts/vcd_to_wavedrom.py" \
+  --vcd docs/rtl_spec/eda/waves.vcd --clock tb_top.clk \
+  --signals tb_top.rst_n tb_top.valid tb_top.ready \
+  --cycles 12 \
+  --verdi-manifest docs/rtl_spec/eda/convert_manifest.json \
+  --vcs-run-manifest docs/rtl_spec/eda/run_manifest.json \
+  --out docs/rtl_spec/waveforms/sample_observed.json5 \
+  --svg docs/rtl_spec/waveforms/sample_observed.svg
+```
+
+`VCS/VERDI OBSERVED` 标签必须通过 VCS FSDB 和 Verdi 导出的 VCD 哈希链检查。没有两份真实 manifest 的外来 VCD，只能标记为 `VCD OBSERVED — FILE SOURCE NOT AUTHENTICATED`。使用 WaveDrom 静态推导的内容始终标记 `ILLUSTRATIVE — NOT SIMULATED`。
+
+详细见 [`references/eda-vcs-verdi.md`](references/eda-vcs-verdi.md)。
+
+## RTL → 文档命令
+
+```bash
+SKILL=~/.agents/skills/rtl-to-spec
+python3 "$SKILL/scripts/inventory.py" --root . --filelist rtl.f --out docs/rtl_spec/inventory.json
 python3 "$SKILL/scripts/scaffold.py" --root . --inventory docs/rtl_spec/inventory.json \
-  --out docs/rtl_spec --top YOUR_TOP
-# 之后由 Codex 读取 RTL，并把模板中 TODO 填成真实实现分析，生成示意波形
-python3 "$SKILL/scripts/render_wavedrom.py" \
-  --input docs/rtl_spec/waveforms/reset.json5 \
-  --output docs/rtl_spec/waveforms/reset.svg
-# 真实 VCD 文件存在时可额外执行
-python3 "$SKILL/scripts/vcd_to_wavedrom.py" --vcd sim/run.vcd \
-  --clock tb_top.clk --signals tb_top.rst_n tb_top.valid tb_top.ready \
-  --cycles 12 --out docs/rtl_spec/waveforms/transfer.json5 \
-  --svg docs/rtl_spec/waveforms/transfer.svg
-python3 "$SKILL/scripts/compare_waveforms.py" \
-  --expected docs/rtl_spec/waveforms/example.json5 \
-  --observed docs/rtl_spec/waveforms/transfer.json5 \
-  --report docs/rtl_spec/waveform_compare_report.json   # 可选，需先核实对齐
+  --out docs/rtl_spec --top your_dut
+# 接着由 Codex 读 RTL、完善所有章节和 WaveDrom 场景（草稿含 [TODO]，不能视作交付版）。
 python3 "$SKILL/scripts/validate.py" --root . --docs docs/rtl_spec \
   --inventory docs/rtl_spec/inventory.json --strict
 ```
 
-- `inventory.py`：候选模块、端口、参数、实例、源文件哈希与行数；**词法级**, 非完整 SystemVerilog elaboration。
-- `scaffold.py`：按模板创建草稿，默认不覆盖现有文档。
-- `render_wavedrom.py`：离线绘制 `.json5`（需使用严格 JSON 语法、有限的 WaveDrom 符号子集）到 SVG。完整 WaveDrom JSON5 语法请用上游渲染器。
-- `vcd_to_wavedrom.py`：处理 VCD 的指定信号，在时钟 0→1 边沿采样，输出 SVG 和带源 VCD 哈希的 `.meta.json`。**VCD 观测 ≠ 仿真通过 ≠ 功能正确性证明**。
-- `compare_waveforms.py`：对齐后的逐周期示意图/观测图一致性对照；匹配不等于设计正确。
-- `validate.py`：检查文档标题、代码引用路径/行号、波形文件、原 RTL 哈希是否变化、草稿占位符；它不验证行为论断是否为真。
+- `scripts/inventory.py`：词法索引、端口候选、文件 SHA256，**不能代替 VCS 完整编译展开**。
+- `scripts/scaffold.py`：创建正式的 IP/模块模板，默认不覆盖。
+- `scripts/render_wavedrom.py`：无联网依赖的严格 JSON 波形 SVG 子集渲染。
+- `scripts/vcs_verdi.py`：有意使用 **VCS + Verdi** 的 dry-run/执行、FSDB/VCD 哈希证据记录。
+- `scripts/vcd_to_wavedrom.py`：解析来自 Verdi 导出 VCD 的时钟采样值并生成 `.json5`/SVG。
+- `scripts/compare_waveforms.py`：已对齐的示意图和观测图逐周期对照，不是功能证明。
+- `scripts/validate.py`：章节、图表编号、引用、文件哈希等静态检验；`--release` 是额外的证据门槛，不构成人工审批。
 
-## 设计交付结构
+## 示例与测试
 
-```text
-docs/rtl_spec/
-├── inventory.json
-├── ip_spec.md
-├── modules/
-│   ├── your_top.md
-│   └── your_submodule.md
-├── waveforms/
-│   ├── reset.json5
-│   ├── reset.svg
-│   ├── transfer.json5
-│   ├── transfer.meta.json
-│   └── transfer.svg
-└── validation_report.json
-```
-
-## 验收与边界
-
-- 正确区分**异步/同步复位**、非阻塞赋值的更新时刻、ready/valid 的**握手发生边沿**和输出 post-edge 的区别。
-- 涉及 SV package、interface、generate、宏分支、复杂参数时，必须用现有编译配置和 Verilator / pyslang 等进行核对；否则显示为 **未完整展开 / 未验证**。
-- 没有仿真器也可输出参考示意图，但**不可**标注模拟/形式验证已通过。若有 Icarus/Verilator 或可选 `wave-mcp`/`wavepeek`，可额外提取真实观测证据。
-- 脚本支持 `.v`、`.sv` 的常用模块声明索引；interface、class、UDP、绑定断言、复杂 macro 和完整 SV 前端超出了内置词法扫描的准确性边界。
-- `waveform` SVG 属于源逻辑解释辅助，既不是硬件实测，也不是安全性验证。
-
-## 自检
+- `examples/tiny_ip/`：8 位 ready/valid 寄存器切片、一份 testbench、VCS/Verdi 示例配置和一个**人工制作的 VCD 解析器夹具**。
+- `examples/demo_output/`：已填好的正式 IP Spec + 模块 Spec + 示例 WaveDrom SVG；其 VCD **不是由 VCS 仿真得到的**，仅用于脚本测试。不可把它作为证明。
+- `tests/`：Python 标准库单元测试，包含无商业 EDA 条件下的 dry-run、hash chain 和格式检验。
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-测试用到内附的小型 valid-ready RTL 与**手工构建的 VCD 测试夹具**；该 VCD 仅用于测试解析器，不能充当真实仿真证据。示范输出保存在 `examples/demo_output/`。
+## 许可及边界
 
-## 上游参考及许可
-
-该 Skill 中的 Python 辅助代码和文档为独立实现，按照仓库根目录 `LICENSE`（MIT）授权；没有拷贝上游源文件。借鉴的开源设计思想、链接及许可证详见 [`references/tool-adapters.md`](references/tool-adapters.md)。
+代码和文档使用仓库根目录 MIT 许可证；不包含 VCS、Verdi、FSDB 库或上游 Skill 的源文件。所借鉴的开源项目及说明见 [`references/tool-adapters.md`](references/tool-adapters.md)。仓库公开发布的是本 Skill 本身；不要将用户工程、商业 IP、FSDB 或机密仿真结果提交到仓库。

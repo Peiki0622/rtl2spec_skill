@@ -1,0 +1,13 @@
+{
+  "project_root": ".",
+  "filelist": "rtl.f",
+  "dut_top": "rv_stage",
+  "tb_top": "tb_rv_stage",
+  "output_dir": "docs/rtl_spec/eda",
+  "fsdb": "docs/rtl_spec/eda/waves.fsdb",
+  "vcd": "docs/rtl_spec/eda/waves.vcd",
+  "fsdb_dump_mode": "ucli",
+  "compile_extra": ["tb_rv_stage.v"],
+  "run_extra": [],
+  "timeout_seconds": 1800
+}

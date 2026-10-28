@@ -163,3 +163,112 @@ class ValidationTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+# Vendor EDA adapter tests use planning/mocked artifacts ONLY: VCS and Verdi are not run.
+from vcs_verdi import load_config, make_commands, action, save_ucli_dump
+from unittest.mock import patch
+import hashlib
+
+
+class VendorAdapterTests(unittest.TestCase):
+    def sample_config(self, root: Path):
+        (root / 'rtl.f').write_text('dut.sv\n')
+        (root / 'dut.sv').write_text('module dut; endmodule\n')
+        c = root / 'cfg.json'
+        c.write_text(json.dumps({'project_root': '.', 'filelist': 'rtl.f', 'tb_top': 'tb_dut',
+                                  'output_dir': 'docs/rtl_spec/eda', 'fsdb_dump_mode': 'ucli',
+                                  'compile_extra': ['tb_dut.sv'], 'run_extra': [],
+                                  'convert_extra': []}))
+        return c
+
+    def test_config_anchor_is_config_parent_not_current_cwd(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            cfg = load_config(self.sample_config(p))
+            self.assertEqual(cfg['root'], p.resolve())
+            self.assertEqual(cfg['filelist_path'], (p/'rtl.f').resolve())
+            self.assertEqual(cfg['simv_path'], p/'docs/rtl_spec/eda/build/simv')
+
+    def test_vendor_command_pipeline_and_dry_run(self):
+        with tempfile.TemporaryDirectory() as d:
+            cfg = load_config(self.sample_config(Path(d)))
+            commands = make_commands(cfg)
+            vcs = commands['compile']
+            self.assertIn('-kdb', vcs)
+            self.assertIn('-debug_access+all', vcs)
+            self.assertEqual(vcs[vcs.index('-top') + 1], 'tb_dut')
+            self.assertEqual(vcs[vcs.index('-f') + 1], str(cfg['filelist_path']))
+            self.assertTrue(any(x.startswith('-Mdir=') for x in vcs))
+            self.assertIn('fsdb2vcd', commands['convert'][0])
+            self.assertIn('-ssf', commands['open'])
+            self.assertEqual(action(cfg, 'compile')['status'], 'DRY_RUN')
+            self.assertFalse(cfg['out'].exists())
+
+    def test_ucli_fsdb_dump_has_no_rtl_source_changes(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            cfg = load_config(self.sample_config(p))
+            before = (p/'dut.sv').read_bytes()
+            cfg['out'].mkdir(parents=True)
+            tcl = save_ucli_dump(cfg).read_text()
+            self.assertIn('$fsdbDumpfile', tcl)
+            self.assertIn('$fsdbDumpvars(0, tb_dut)', tcl)
+            self.assertIn('run\nquit', tcl)
+            self.assertEqual((p/'dut.sv').read_bytes(), before)
+
+    def test_reject_output_path_escaping_project(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            path = self.sample_config(p)
+            data = json.loads(path.read_text()); data['output_dir'] = '../not_allowed'
+            path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, 'inside project_root'):
+                load_config(path)
+
+    def test_reject_shell_command_string_in_argv(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            path = self.sample_config(p)
+            data = json.loads(path.read_text()); data['compile_extra'] = '&& rm -rf rtl'
+            path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError, 'argv strings'):
+                load_config(path)
+
+    def test_release_gate_rejects_demo_without_real_vendor_evidence(self):
+        root = BASE / 'examples' / 'tiny_ip'
+        docs = BASE / 'examples' / 'demo_output'
+        report = validate(root, docs, docs / 'inventory.json', True, release=True)
+        self.assertEqual(report['mode'], 'release')
+        self.assertEqual(report['status'], 'FAIL')
+        self.assertTrue(any('release gate: missing Synopsys' in e for e in report['errors']))
+
+    def test_verdi_manifest_hash_requirement_rejects_mismatch(self):
+        import subprocess
+        root = BASE / 'examples' / 'tiny_ip'
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            bad_conv = {'stage':'convert','executed':True,'status':'PROCESS_EXIT_0_UNQUALIFIED',
+                        'vcd_sha256':'0'*64,'fsdb_sha256':'f'*64}
+            fake_run = {'stage':'run','executed':True,'status':'PROCESS_EXIT_0_UNQUALIFIED',
+                        'fsdb_exists':True,'fsdb_sha256':'f'*64}
+            conv = p/'convert_manifest.json'; run = p/'run_manifest.json'
+            conv.write_text(json.dumps(bad_conv)); run.write_text(json.dumps(fake_run))
+            proc = subprocess.run([sys.executable, str(BASE/'scripts/vcd_to_wavedrom.py'),
+                                   '--vcd', str(root/'fixture.vcd'), '--clock','tb_rv_stage.clk',
+                                   '--signals','tb_rv_stage.out_valid',
+                                   '--verdi-manifest',str(conv), '--vcs-run-manifest',str(run),
+                                   '--out',str(p/'out.json5')], capture_output=True, text=True)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn('hash differs', proc.stderr)
+
+    def test_missing_one_of_vendor_manifests_is_rejected(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d); mf = p/'convert.json'; mf.write_text('{}')
+            proc = subprocess.run([sys.executable, str(BASE/'scripts/vcd_to_wavedrom.py'),
+                                   '--vcd',str(BASE/'examples/tiny_ip/fixture.vcd'),
+                                   '--clock','tb_rv_stage.clk', '--signals','tb_rv_stage.out_valid',
+                                   '--verdi-manifest',str(mf), '--out',str(p/'out.json5')],
+                                   capture_output=True, text=True)
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn('BOTH', proc.stderr)

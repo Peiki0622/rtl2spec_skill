@@ -1,31 +1,26 @@
-# Optional EDA adapters and source attributions
+# Tool policy and upstream attributions (v0.2)
 
-Bundled scripts use Python 3.10+ standard library only. The Codex host does the semantic RTL reasoning. Use external tools when present; do not silently install or modify a user's environment.
+## Primary EDA — mandatory
 
-| Capability | Suggested tool | How to use |
+**Synopsys VCS** is the default simulator/elaborator and **Synopsys Verdi** is the default waveform/debug platform. Use `scripts/vcs_verdi.py` and follow [VCS + Verdi workflow](eda-vcs-verdi.md). Files are never passed to unapproved remote services. Both tools require the user's licensed, configured installation. The included Python converter and SVG renderer are **post-processing utilities**, not substitute EDA engines.
+
+| Capability | Tool | Guarantee / qualification |
 | --- | --- | --- |
-| Full/SystemVerilog elaboration | Verilator `--lint-only` and/or pyslang | Supply project's actual `-f` filelist, `+incdir+`, `-D`, parameters and `--top-module`; resolve diagnostics, then cite compiled configuration. |
-| Quick Verilog RTL simulation | Icarus (`iverilog`, `vvp`) | Reuse existing testbenches first; VCD output requires `$dumpvars`. |
-| Alternative RTL AST/synthesis | Yosys (`read_verilog`, `hierarchy`) | Only claim semantics for supported Verilog subset and active synthesis parameters. |
-| Manual/document waveforms | WaveDrom and included SVG renderer | `.json5` strict-JSON subset (not a general JSON5 parser). |
-| Large waveform debug | `wavepeek` or Tencent `wave-mcp` | Optional tools; they do not execute the simulator and cannot alone prove correctness. |
-| Automatic VCD → WaveDrom | Included converter or Toroid `vcd2wavedrom` | Require explicit clock/selected signals and publish sampling convention. |
+| Build, elaborate, simulate SystemVerilog | **VCS** (`vcs`, `simv`) | Must use actual source filelist / TB / macros and record logs; exit=0 is not correctness. |
+| Waveform recording and debugging | **Verdi FSDB** (`$fsdbDumpvars`, Verdi nWave) | FSDB is an observation database; can contain X/unknown and incomplete scopes. |
+| FSDB export for document figures | **Verdi `fsdb2vcd`** | Vendor tool, requires license/installation; retain FSDB+VCD SHA256 chain. |
+| Documentation diagrams | **Included WaveDrom subset renderer** | Fully offline; illustrations are not simulated, VCD-derived diagrams only represent sampled values. |
+| Inventory/template/validation | **Included Python scripts** | Deterministic text processing, not full SystemVerilog parsing or verification. |
+
+**Do not make Icarus, Verilator, Yosys or waveform MCP backends part of the default verification path**. If a user separately requests one as an additional cross-check, report it as an optional independent tool, never a replacement for the required VCS/Verdi provenance.
 
 ## Inspiration, not vendored dependencies
 
-This skill implements its own scripts and Markdown instructions. No upstream files or library code are bundled/copied. Links to techniques which informed the workflow:
+This Skill implements its own scripts and Markdown instructions. No upstream files or libraries are bundled. Design patterns informed by these projects:
 
-1. [phamcuong21478/rtl-skills](https://github.com/phamcuong21478/rtl-skills) (Apache-2.0): `vexplain` source-grounded module documentation and `vdoc` module-to-IP aggregation. Avoid assuming its Verilog-2005-only, sync-reset, or directory conventions apply to arbitrary designs.
-2. [Eriemon/verilog-generator](https://github.com/Eriemon/verilog-generator) (Apache-2.0): spec + WaveDrom handoff and explicit verification provenance. Original primary generation flow is not equivalent to RTL→Spec.
-3. [codejunkie99/Gateflow-Plugin](https://github.com/codejunkie99/Gateflow-Plugin): SV understanding, hierarchy and FSM investigation; follow its own license and installation instructions if actually used.
-4. [Toroid-io/vcd2wavedrom](https://github.com/Toroid-io/vcd2wavedrom) (MIT): VCD→WaveDrom workflow; included parser is independently authored and intentionally narrower.
-5. [Octopustank/wavepeek-master-skill](https://github.com/Octopustank/wavepeek-master-skill) (Apache-2.0): external waveform inspection workflow.
-6. [Tencent/wave-mcp](https://github.com/Tencent/wave-mcp) (Apache-2.0): optional richer MCP for FST and SV structure/driver analysis.
-7. [WaveDrom](https://github.com/wavedrom/wavedrom): timing-diagram data conventions; renderer bundled here is an independent **subset renderer**, not the WaveDrom implementation.
-8. [OpenAI skills documentation](https://learn.chatgpt.com/docs/build-skills): Codex skill packaging and activation.
-
-## Dependency separation
-
-- Always available: lexical inventory, doc templates, offline simple SVG rendering, VCD extraction, spec validation.
-- Only if locally installed: full SV elaboration, lint/synthesis, real simulation, FST analysis, waveform MCP.
-- Never imply physically measured side-channel or silicon/FPGA verification from a simulation.
+1. [phamcuong21478/rtl-skills](https://github.com/phamcuong21478/rtl-skills) (Apache-2.0): source-grounded `vexplain` and `vdoc`.
+2. [Eriemon/verilog-generator](https://github.com/Eriemon/verilog-generator) (Apache-2.0): WaveDrom/spec contract and provenance distinction; its primary generator is not an RTL→Spec analyzer.
+3. [codejunkie99/Gateflow-Plugin](https://github.com/codejunkie99/Gateflow-Plugin): hierarchy and FSM investigation; follow upstream licensing if independently used.
+4. [Toroid-io/vcd2wavedrom](https://github.com/Toroid-io/vcd2wavedrom) (MIT): conceptual VCD→WaveDrom flow; our parser is independently authored.
+5. [WaveDrom](https://github.com/wavedrom/wavedrom): diagram syntax; our renderer supports only a documented subset.
+6. [Synopsys VCS](https://www.synopsys.com/verification/simulation/vcs.html) and [Synopsys Verdi](https://www.synopsys.com/blogs/chip-design/verdi-waveform-utilities.html): commercial user-installed proprietary tools — **not bundled or relicensed**.

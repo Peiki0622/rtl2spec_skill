@@ -1,33 +1,31 @@
-# 设计实施说明（2026-10-28）
+# Formal IP Specification Skill — implementation design v0.2 (2026-10-28)
 
-## 目标
+## Goal
 
-提供一个无需 FPGA/商用 EDA 即可启动、可以在 Codex 中直接触发、对已有 RTL 实现生成详细 Spec 的本地 Skill；兼容后续 Verilator、Icarus、pyslang、wavepeek、wave-mcp 的增量集成。
+A Codex skill that reverse-documents **actual** existing Verilog/SystemVerilog into reviewable IP specs with source citations and cycle-accurate timing figures, built around the user's specified commercial EDA stack **Synopsys VCS + Verdi**. No source DUT changes; user output is isolated under `docs/rtl_spec/` by default. No commercial EDA binaries are included.
 
-## 分层设计
+## Document control layer
 
-1. **Discovery** `inventory.py`：文件与粗层级索引、源码 hash、候选 ports、模组来源；不声明解析正确性/可编译性。
-2. **Codex analysis** `SKILL.md` + `references/spec-contract.md`：读编译配置，分析模块契约、时序与状态机，生成源代码证据引用。
-3. **Document composition** `scaffold.py`：IP + 各模块文档，固定标题以便校验；Agent 填写真实语义和架构图。
-4. **Wave artifacts** `render_wavedrom.py`：独立离线绘图；`vcd_to_wavedrom.py`：VCD 观测提取、采样约定、来源 hash。两类图必须标注证据等级。
-5. **QA** `compare_waveforms.py` 比较相同边沿/采样约定的示意与观测图；`validate.py`：结构、路径、波形、文件 hash 和占位符静态检查。
+- Cover metadata with Document ID, revision, status, author/reviewer/approver (unassigned until real review), configuration ID and source revision.
+- IP: mandatory 13 numbered chapters plus module/glossary appendices; individual module: mandatory 9 numbered chapters. Strong interface, clock/reset, state, timing, register map, integration, evidence and traceability structure.
+- Number tables/figures by chapter; every key waveform has a cycle table, source location and origin label.
+- `validate.py --strict`: structural checks, paths, sections, figure caption, snapshot integrity. `--release`: extra actual VCS + Verdi manifest gate; no automatic approval.
 
-## 上游设计的整合方式
+## EDA/data path
 
-- rtl-skills/vexplain/vdoc：源代码优先的模块分析和模块到 IP 文档聚合；避免移植 Claude 专属工具契约。
-- verilog-generator：WaveDrom 与 Spec 联动、严格区分分析 vs 实际执行。
-- Gateflow：有条件采用更强的 SV elaboration/层次分析，而不假设可用。
-- vcd2wavedrom / wavepeek / wave-mcp：可选波形处理及溯源增强，不与离线基础功能强绑定。
+1. `inventory.py` generates lexical candidate module/port index and hashes; Codex confirms real hierarchy/parameters via VCS compile and manual RTL reading.
+2. `scaffold.py` generates standard Spec drafts. Codex fills with implementation-grounded descriptions and source locations.
+3. `vcs_verdi.py` dry-run / optional real `--execute`: VCS `-kdb -debug_access+all` builds simulation binary; VCS `simv` runs existing TB and captures FSDB (TB dump or generated UCLI commands); Verdi inspects FSDB and `fsdb2vcd` converts waveform selection to VCD. Records stage commands, status and FSDB/VCD hashes.
+4. `vcd_to_wavedrom.py` groups VCD changes at each rising-edge timestamp (post-timestamp), emits diagrams and metadata; checks both VCS and Verdi manifests before claiming vendor-observed provenance.
+5. `render_wavedrom.py` draws independent simple SVG illustrations; `compare_waveforms.py` compares aligned samples; `validate.py` lints docs and source snapshot. Human and testbench assertions are needed for functional sign-off.
 
-## 已实现边界
+## Limits
 
-- Python 标准库可用时，词法索引、草稿、WaveDrom JSON/SVG、VCD 样本、文档结构验证可运行。
-- 不内置完整 SV elaborator，不含波形可视化 GUI，不自动综合、安装仿真器或验证设计功能。
-- Codex 侧真实任务的最终正确性依赖项目编译配置、Testbench 质量和人工/EDA 核对。
+- Requires licensed VCS/Verdi for actual vendor EDA runs; authorship environment only dry-run verified.
+- Vendor compile flags, DPI, PLI, encrypted models, design filelists, licenses and version-specific FSDB methods vary; project configuration must be checked.
+- No automatic inference of design intent, no full SV elaborator built into Python index, no guarantee of testbench coverage, no Verdi GUI auto-screenshot/export, no fake simulation PASS.
+- Spec can be delivered as DRAFT without vendor EDA if gaps explicitly marked. `RELEASED` requires external review and approval.
 
-## 下一阶段可选扩展（不属于这次交付已实现功能）
+## Upstream inspiration
 
-- 利用 pyslang AST 写确定性的接口/层次提取 adapter，取代词法候选。
-- 结合 iverilog/verilator 生成通用仿真 harness 和基于 assertions 的周期追踪报告。
-- 增加 SVA/形式验证，把关 `post-NBA` 周期级延迟和 ready/valid 不丢包属性。
-- 针对多时钟设计输出事件时间轴，而非仅单时钟沿采样。
+`rtl-skills/vexplain` + `vdoc` for source-first document contract, `verilog-generator` for WaveDrom handoff, Gateflow for SV analysis workflows; independent Python implementation (no vendored third-party source). Refer to `references/tool-adapters.md` and `references/eda-vcs-verdi.md`.

@@ -1,22 +1,27 @@
-# Waveform generation, confidence, and timing checks
+# Timing diagrams, edge semantics and verification
 
-## Preferred scenarios
+## Required scenario selection
 
-Analyze the reachable control structure before choosing examples. Start with reset/assert/release, first accepted transaction, an ordinary completion, consecutive transfers, and any real stall/backpressure/flush/error behavior. Do not create protocol features missing in the RTL. For multi-clock designs generate independent clock-domain examples and explain inter-domain assumptions; do not derive a fixed latency through an asynchronous crossing unless justified.
+Start with reset assertion/release, first transaction, normal completion, consecutive transactions, and any **actual** stall/backpressure/flush/error behavior. Do not invent missing protocol features. Multi-clock examples need domain-specific edge definitions; do not promise deterministic asynchronous crossing latency without evidence.
 
-## Edge semantics
+## Edge timing rules
 
-- Define whether a row/cycle depicts values **before** the rising edge or **after** the nonblocking assignment region. These differ by one cycle. For designs using `always_ff`/`always @(posedge clk)` and `<=`, old state determines updates and newly assigned registers become visible after the NBA updates.
-- This package's VCD converter groups all changes with the same timestamp, then reports values **after the last VCD change at that timestamp**. It detects a rising edge from 0→1; it does not claim this is an exact simulator scheduling-region trace, nor does it model glitches between sample points. Name the clock `clk (posedge samples)` accordingly.
-- If protocol transfers occur at an edge, sample ready/valid **just before** the edge for acceptance. Post-edge samples are appropriate for **registered outputs**. This distinction must be reflected in the cycle table; never infer a transaction from post-edge `valid && ready` alone.
-- Resets can occur asynchronously between clock edges. A posedge-sampled diagram may omit this event. Use an event-level diagram/simulator inspection for asynchronous assertion and release.
-- For reset, specify whether outputs are combinational, synchronous reset or asynchronous reset, and what `X`/`Z` values mean. Never coerce unknowns to 0.
+- For `always_ff` or `always @(posedge clk)` and nonblocking `<=`, state transitions depend on old state at the edge; new register values appear in the nonblocking-update region. Label **pre-edge handshake acceptance** separately from **post-edge registered outputs**.
+- This Skill's converter samples VCD values **after all recorded changes at each rising-edge timestamp** (last value at timestamp). It does **not** reconstruct all simulation scheduling regions or setup/hold behavior. A `posedge` clock row is a cycle marker rather than a full waveform.
+- Asynchronous reset may take effect *between* clock edges; do not use only posedge snapshots to claim reset assertion latency. Preserve X/Z and missing signals; do not coerce to zero.
 
-## Diagram format
+## Diagram format and provenance
 
-Write **strict JSON** (a subset of WaveDrom JSON5) with `signal`, each item having `name`, `wave`, optional `data`, optional `node`. Supported by the bundled fallback SVG renderer: `0`, `1`, `x`, `z`, `=`, `.`, `p` (one clock pulse/cycle); `data` supplies labels for each `=` segment. Renderer supports this simple subset **only**, not all WaveDrom syntax. For full WaveDrom syntax, render with an upstream WaveDrom tool rather than this fallback.
+Output strict JSON (subset of WaveDrom JSON5) with one `signal` row per selected trace; wave symbol subset `0`, `1`, `x`, `z`, `=`, `.`, `p`, and bus `data` labels. Render offline with `scripts/render_wavedrom.py`. For advanced WaveDrom effects use a separately licensed/installed official renderer rather than claiming this subset implements all JSON5 syntax.
 
-Example (illustrative, not simulated):
+Every figure requires `**Figure 9-n — ...**` (IP) or `**Figure 7-n — ...**` (module), embedded SVG, scenario purpose and input sequence, source citation, cycle table and provenance:
+
+- `ILLUSTRATIVE — NOT SIMULATED`: derived from RTL only. Always available after careful source analysis.
+- `VCS/VERDI OBSERVED — NOT A CORRECTNESS PROOF`: trace from an actual VCS FSDB run exported with Verdi `fsdb2vcd` and checked manifest chain. Log simulator command, filelist, FSDB/VCD hash, observed signal mapping, VCD timescale and sampling convention.
+- `VCD OBSERVED — FILE SOURCE NOT AUTHENTICATED`: optional imported VCD without both VCS+Verdi manifests; must not claim VCS execution.
+- `SYNTHETIC FIXTURE — NOT A SIMULATION`: parser-only tests.
+
+**Example of a simple illustrative diagram:**
 
 ```json
 {
@@ -26,35 +31,16 @@ Example (illustrative, not simulated):
     {"name": "req", "wave": "0.10.."},
     {"name": "state", "wave": "=.=..=", "data": ["IDLE", "BUSY", "IDLE"]}
   ],
-  "head": {"text": "ILLUSTRATIVE — NOT SIMULATED"},
-  "config": {"hscale": 1}
+  "head": {"text": "ILLUSTRATIVE — NOT SIMULATED"}
 }
 ```
 
-Check before publishing: wave string lengths, bus data count, declared ports existing in the source, register-update offsets, reset and ready/valid behaviors, X handling, consecutive transfers, and stall preservation. WaveDrom `.json5` data must parse as strict JSON for bundled renderer. Include markdown reference `![...] (waveforms/xxx.svg)` with proper path relative to the document.
+## Synopsys verification flow
 
-## Real simulation evidence
+Read [VCS + Verdi workflow](eda-vcs-verdi.md) and invoke `vcs_verdi.py`. Normal tool outputs: `eda/vcs_compile.log`, `eda/vcs_run.log`, `eda/waves.fsdb`, `eda/waves.vcd`, `eda/{compile,run,convert}_manifest.json`. Real VCS simulation requires a testbench; if none exists, make one in generated/output tree only with authorization, or mark `NOT RUN`. Never edit DUT RTL for a waveform.
 
-Prefer existing testbenches and build commands. If none exist and the user authorizes testbench work, place new testbenches only in an **output/temporary** tree; do not edit DUT. For Icarus on compatible Verilog/SystemVerilog designs, example:
+With FSDB converted to VCD, use `vcd_to_wavedrom.py` and **both** `--verdi-manifest` and `--vcs-run-manifest` when claiming the VCS/Verdi observation chain. Use `compare_waveforms.py` only after explicit timestamp, edge and sample alignment; matches are a diagnostic, not a functional proof.
 
-```bash
-iverilog -g2012 -s tb_top -o /tmp/rtl_spec_sim.vvp -f rtl.f tb/tb_top.sv
-vvp /tmp/rtl_spec_sim.vvp
-# The testbench must call $dumpfile("...") / $dumpvars(...)
-```
+## Final document gate
 
-For Verilator, use the project's established testbench/build invocation. Produce VCD/FST. FST requires a suitable converter or wave-mcp/wavepeek; bundled parser supports VCD **only**. Convert VCD to WaveDrom by explicit signal selection and a clock; capture command/tool/version, input VCD hash, tested assertions and pass/fail. The converter **cannot** independently verify that VCD was generated by a simulator or that the DUT conforms to a requirement.
-
-## Optional deep waveform analysis
-
-- wavepeek CLI: inspect FST/VCD signals and transitions, if installed.
-- Tencent wave-mcp: preferred for long FST, hierarchy, drivers, X-propagation and signal-value queries; configure as an external MCP according to its own documentation.
-- vcd2wavedrom: alternate VCD conversion with its own config/sampling conventions. Don't assume it and this script sample on the same edges.
-
-## Compare an illustrative diagram against VCD-derived sampling
-
-If and only if source-derived diagram and VCD-derived diagram use exactly the same column-to-edge mapping, `compare_waveforms.py` can compare signal values cell-by-cell. It reports differences and inconclusive `X/Z` cells. Use this as an **alignment check**, not a protocol proof: output-after-edge samples may be equal even when handshake acceptance semantics were misinterpreted. Never compare independently time-shifted scenarios without explicit alignment.
-
-## Coverage rubric
-
-For each scenario document: objective; related RTL files/lines; start condition; input sequence; expected outputs; cycle table; WaveDrom artifact; confidence/provenance; actual checks performed; limits. A timing claim is only **confirmed** when supported by the appropriate observed/formal evidence for the specific configuration.
+Strict formatting check: `validate.py --strict`, including section numbers, document metadata, revision history, figure captions, file:line citations, SVG links and RTL snapshot hash. `--release` additionally checks evidence manifests and human-marked document Status; it **does not** produce an approval or sign-off. Humans must review function, coverage, legal/confidentiality classification, quality of VCS testbench checkers and Verdi waveform interpretation.

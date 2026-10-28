@@ -1,0 +1,13 @@
+{
+  "project_root": ".",
+  "filelist": "rtl.f",
+  "dut_top": "your_ip_top",
+  "tb_top": "tb_your_ip_top",
+  "output_dir": "docs/rtl_spec/eda",
+  "fsdb": "docs/rtl_spec/eda/waves.fsdb",
+  "vcd": "docs/rtl_spec/eda/waves.vcd",
+  "fsdb_dump_mode": "ucli",
+  "compile_extra": [],
+  "run_extra": [],
+  "timeout_seconds": 1800
+}
