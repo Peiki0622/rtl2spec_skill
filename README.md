@@ -1,6 +1,6 @@
 # RTL-to-Spec — Codex Skill（中文使用指南）
 
-> GitHub repo: [Peiki0622/rtl2spec_skill](https://github.com/Peiki0622/rtl2spec_skill).\n> Clone this repository and copy the repository directory into `~/.agents/skills/rtl-to-spec` (or `<RTL project>/.agents/skills/rtl-to-spec`).\n\n
+> 仓库：[Peiki0622/rtl2spec_skill](https://github.com/Peiki0622/rtl2spec_skill)。可将仓库根目录复制到 `~/.agents/skills/rtl-to-spec` 或项目的 `.agents/skills/rtl-to-spec`。
 
 将已有 **Verilog/SystemVerilog RTL** 反向整理为设计实际实现的 IP/模块规格文档，包含模块层次、参数/接口、时钟复位、状态机、周期级行为、WaveDrom 示例波形和可选 VCD 观测波形。**不会自动修改 RTL**。
 
@@ -8,23 +8,22 @@
 
 ## 安装（任选一种）
 
-请解压发布的 `rtl-to-spec-codex-skill.zip`，压缩包顶层应包含 `rtl-to-spec/SKILL.md`。
+直接克隆仓库，然后将仓库目录放入 Codex Skill 搜索路径（目录最后一级应为 `rtl-to-spec`）。
 
-### 项目级（推荐，可纳入 Git 管理）
+```bash
+git clone https://github.com/Peiki0622/rtl2spec_skill.git rtl-to-spec
+mkdir -p ~/.agents/skills
+cp -R rtl-to-spec ~/.agents/skills/
+```
+
+项目级安装：
 
 ```bash
 mkdir -p /path/to/your-rtl-project/.agents/skills
 cp -R rtl-to-spec /path/to/your-rtl-project/.agents/skills/
 ```
 
-### 用户级（跨项目使用）
-
-```bash
-mkdir -p ~/.agents/skills
-cp -R rtl-to-spec ~/.agents/skills/
-```
-
-Codex CLI 或 Codex IDE 的会话中输入 `$rtl-to-spec`，或通过 `/skills` 查看 Skill。如果加载列表没有刷新，重启 Codex。以上路径依据 Codex 当前公开文档。
+在 Codex 中使用 `$rtl-to-spec`；若列表未刷新，请重新启动 Codex 会话。
 
 ## 调用方式
 
@@ -105,7 +104,7 @@ docs/rtl_spec/
 ## 自检
 
 ```bash
-python3 -m unittest discover -s rtl-to-spec/tests -v
+python3 -m unittest discover -s tests -v
 ```
 
 测试用到内附的小型 valid-ready RTL 与**手工构建的 VCD 测试夹具**；该 VCD 仅用于测试解析器，不能充当真实仿真证据。示范输出保存在 `examples/demo_output/`。
