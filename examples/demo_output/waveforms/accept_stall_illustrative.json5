@@ -44,7 +44,7 @@
     }
   ],
   "head": {
-    "text": "ILLUSTRATIVE — NOT SIMULATED — one-entry ready/valid stall"
+    "text": "示例时序 · RTL 推导 · ready/valid 暂停与恢复"
   },
   "config": {
     "hscale": 1

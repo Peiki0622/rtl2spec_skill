@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-10-28
+
+- Added a built-in Chinese engineering-writing guide: explain module behavior, handshake conditions and edge timing in straightforward prose.
+- Removed repeated defensive disclaimers from the generated Spec templates, timing figure labels and demonstration documents; kept actual EDA provenance and review state in the designated evidence tables/metadata.
+- Added bilingual chapter titles and compatible strict validation (the stable numbered English keys remain).
+- Added `scripts/style_lint.py` with 6 regression tests for AI-sounding filler and misplaced repeated caveats.
+- Rewrote the tiny ready/valid example as a concise Chinese IP/module Spec and regenerated waveform SVGs.
+- Preserved Synopsys VCS + Verdi as the EDA backend and source-grounded timing/evidence requirements.
+
+
 ## 0.2.0 — 2026-10-28
 
 - Promoted document templates to numbered, controlled **Formal IP Specification** (13 IP chapters + appendices, 9 module chapters, revision history, interface, timing, map, integration, verification and traceability).

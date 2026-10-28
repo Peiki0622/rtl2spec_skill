@@ -1,8 +1,14 @@
-# Formal IP Specification Skill — implementation design v0.2 (2026-10-28)
+# Formal IP Specification Skill — implementation design v0.3 (2026-10-28)
 
 ## Goal
 
 A Codex skill that reverse-documents **actual** existing Verilog/SystemVerilog into reviewable IP specs with source citations and cycle-accurate timing figures, built around the user's specified commercial EDA stack **Synopsys VCS + Verdi**. No source DUT changes; user output is isolated under `docs/rtl_spec/` by default. No commercial EDA binaries are included.
+
+## Technical writing layer
+
+- Default Chinese engineering voice: purpose → input condition → clock-edge/register effect → observable output, then tables/diagrams. Keep RTL identifiers/edge semantics exact.
+- Use bilingual, still machine-checkable chapter headings. A concise figure label indicates `RTL 推导` or `VCS/Verdi 波形`; exact provenance stays in metadata and chapter 12.
+- `references/writing-style-zh.md` guides Codex; `scripts/style_lint.py` catches filler and repeated disclaimers outside the evidence sections. This lint does not attempt semantic rewriting.
 
 ## Document control layer
 

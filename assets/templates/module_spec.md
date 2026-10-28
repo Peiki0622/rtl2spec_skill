@@ -5,73 +5,69 @@
 | Module | `{module}` |
 | Parent IP / configuration | [TODO] |
 | Source | `{source}:{line}` |
-| Revision / status | 0.2-draft / DRAFT |
-| Design elaboration | NOT RUN — lexical discovery only |
-| Verification | NOT RUN — no VCS/Verdi evidence yet |
+| Revision / status | 0.3-draft / DRAFT |
 
-## 1. Module Function
+## 1. Module Function（模块功能）
 
-[TODO: externally observable function and non-functions; use `{source}:{line}` references]
+[TODO: 先用 2～4 句讲清该模块处理哪些输入、产生什么结果、在系统里起什么作用，引用 `{source}:{line}`。]
 
-## 2. Parameters and Build Configuration
+## 2. Parameters and Build Configuration（参数与编译配置）
 
 **Table 2-1 — Module Parameters**
 
-| Parameter | Default | Effective value | Constraint | Source |
+| Parameter | Default | Effective value | Purpose / constraint | RTL source |
 | --- | --- | --- | --- | --- |
 | [TODO] | [TODO] | [TODO] | [TODO] | `{source}:{line}` |
 
-## 3. Port and Protocol Definition
+## 3. Port and Protocol Definition（端口与协议）
+
+[TODO: 先说明接口怎样完成一笔事务，再列出完整端口。]
 
 **Table 3-1 — Module Ports**
 
-| Port | Dir. | Exact width / type | Domain | Reset/default | Sampling/driving rule | RTL source |
+| Port | Direction | Width / type | Clock | Reset/default | Meaning / sampling rule | RTL source |
 | --- | --- | --- | --- | --- | --- | --- |
 | [TODO] | [TODO] | [TODO] | [TODO] | [TODO] | [TODO] | `{source}:{line}` |
 
-[TODO: port-level data transfer contract, no unsupported protocol names]
+## 4. Clock and Reset（时钟与复位）
 
-## 4. Clock and Reset
+[TODO: 明确复位有效电平、同步/异步、复位值、释放后的更新时刻和优先级。]
 
-[TODO: sensitivity, async/sync, polarities, priorities, deassertion, state reset values, CDC / clock gating constraints and citations]
+## 5. State, Datapath and Register Behavior（状态与数据通路）
 
-## 5. State, Datapath and Register Behavior
+**Table 5-1 — Internal State and Registers**
 
-**Table 5-1 — Internal Register / State Inventory**
-
-| Register/state | Width | Reset value | Update condition / equation | Source |
+| Register / state | Width | Reset value | Update and hold condition | RTL source |
 | --- | --- | --- | --- | --- |
 | [TODO] | [TODO] | [TODO] | [TODO] | `{source}:{line}` |
 
-[TODO: FSM state encoding and transition table, datapath equations, memory behavior, decision priorities; old-vs-new semantics of nonblocking assignments]
+[TODO: 解释 FSM 状态转换、数据寄存器怎样配合、何时保持旧值。先说行为，再给必要公式。]
 
-## 6. Functional and Cycle-Level Operation
+## 6. Functional and Cycle-Level Operation（功能与周期时序）
 
-**Cycle convention:** [TODO: pre-edge handshake vs post-NBA output; clock edge; cycle 0 definition]
+**Cycle convention:** [TODO: 指明时钟沿、周期 0、沿前握手和沿后输出]
 
 **Table 6-1 — Cycle-Accurate Transaction**
 
-| Cycle / edge | Inputs and pre-edge handshake | State before → after | Outputs post-edge | RTL evidence |
+| Cycle | Inputs / handshake before edge | State before → after | Outputs after edge | RTL evidence |
 | --- | --- | --- | --- | --- |
 | [TODO] | [TODO] | [TODO] | [TODO] | `{source}:{line}` |
 
-[TODO: latency, initiation interval and throughput under explicitly stated ready/stall conditions]
+[TODO: 用一段话概括延迟、吞吐率和停顿条件，不要重复整张周期表。]
 
-## 7. Timing and Waveform Scenarios
+## 7. Timing and Waveform Scenarios（典型时序）
 
-[TODO: Figure 7-1 linked `../waveforms/<name>.svg`, class ILLUSTRATIVE or VCS/VERDI OBSERVED, signal list, scenario start/end and cycle table alignment]
+[TODO: 插入实际支持场景的 `../waveforms/<name>.svg`，使用 Figure 7-n 图题和「RTL 推导」/「VCS/Verdi 波形」短标签；说明图中的关键边沿。]
 
-## 8. Verification Evidence
+## 8. Verification Evidence（验证记录）
 
-**Table 8-1 — Module Test Evidence**
+**Table 8-1 — Module Verification**
 
-| Check | Testbench / command | VCS result | Verdi FSDB / conversion | Observed limitations |
-| --- | --- | --- | --- | --- |
-| [TODO] | NOT RUN | NOT RUN | NOT AVAILABLE | [TODO] |
+| Check | Tool / input | Artifact | Result |
+| --- | --- | --- | --- |
+| [TODO] | [TODO] | [TODO] | 未执行 / PASS / FAIL |
 
-[TODO: assertions and checker results, simulator exit code vs actual functional checks, FSDB hash, any unresolved failures]
+## 9. RTL Traceability and Open Issues（源码追溯与待确认事项）
 
-## 9. RTL Traceability and Open Issues
-
-- `{source}:{line}` — module declaration.
-- [TODO: trace significant register/interface/timing claims back to actual source lines; unknowns and unsupported variants]
+- `{source}:{line}` — 模块定义。
+- [TODO: 其余关键行为的源码证据，以及真实存在的待确认事项。]

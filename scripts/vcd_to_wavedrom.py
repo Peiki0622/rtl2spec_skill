@@ -184,7 +184,7 @@ def convert(vcd: Path, clock: str, signals: list[str], cycles: int = 16,
         if data:
             row['data'] = data
         rows.append(row)
-    diagram = {'signal': rows, 'head': {'text': 'VCD OBSERVED — NOT A CORRECTNESS PROOF'},
+    diagram = {'signal': rows, 'head': {'text': 'VCD 观测 · 来源待核对'},
                'config': {'hscale': 1}}
     metadata = {
         'provenance': 'VCD-OBSERVED (file source and testbench pass status not authenticated)',
@@ -236,7 +236,7 @@ def main():
                 raise ValueError('FSDB hash is missing or differs between VCS and Verdi manifests')
             if not run.get('fsdb_exists'):
                 raise ValueError('VCS run manifest lacks FSDB output evidence')
-            diagram['head']['text'] = 'VCS/VERDI OBSERVED — NOT A CORRECTNESS PROOF'
+            diagram['head']['text'] = 'VCS/Verdi 波形'
             meta['provenance'] = 'VCS/VERDI-OBSERVED (command/hash chain, no functional proof)'
             meta['fsdb_sha256'] = conversion['fsdb_sha256']
             meta['fsdb_path'] = conversion.get('fsdb')

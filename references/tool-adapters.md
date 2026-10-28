@@ -1,4 +1,4 @@
-# Tool policy and upstream attributions (v0.2)
+# Tool policy and upstream attributions (v0.3)
 
 ## Primary EDA — mandatory
 
@@ -24,3 +24,7 @@ This Skill implements its own scripts and Markdown instructions. No upstream fil
 4. [Toroid-io/vcd2wavedrom](https://github.com/Toroid-io/vcd2wavedrom) (MIT): conceptual VCD→WaveDrom flow; our parser is independently authored.
 5. [WaveDrom](https://github.com/wavedrom/wavedrom): diagram syntax; our renderer supports only a documented subset.
 6. [Synopsys VCS](https://www.synopsys.com/verification/simulation/vcs.html) and [Synopsys Verdi](https://www.synopsys.com/blogs/chip-design/verdi-waveform-utilities.html): commercial user-installed proprietary tools — **not bundled or relicensed**.
+
+## Natural technical prose
+
+The Skill's Chinese writing guide draws general principles from [blader/humanizer](https://github.com/blader/humanizer) and [ai-zixun/humanizer-zh](https://github.com/ai-zixun/humanizer-zh), combined with domain rules specific to RTL: preserve signal names, clock edges, register semantics and source citations. These upstream Skills are optional and not vendored into this repository; `style_lint.py` and our templates are original implementations.

@@ -3,104 +3,96 @@
 | Document field | Value |
 | --- | --- |
 | Module | `rv_stage` |
-| Parent IP / configuration | rv_stage / WIDTH=8 |
+| Parent IP / configuration | `rv_stage` / `WIDTH=8` |
 | Source | `rv_stage.v:2` |
-| Revision / status | 0.2-demo / DRAFT — example only |
-| Design elaboration | VCS NOT RUN; lexical inventory only |
-| Verification | VCS/Verdi NOT RUN; synthetic parser fixture only |
+| Revision / status | 0.3-demo / DRAFT |
 
-## 1. Module Function
+## 1. Module Function（模块功能）
 
-`rv_stage` is a one-slot register stage for data and valid state. The input can be accepted when the output is empty or downstream is ready; during stall the output registers hold (`rv_stage.v:15`, `rv_stage.v:21-25`). No other protocol or address bus is implemented.
+`rv_stage` 是一个单级数据缓冲模块。它把上游送来的 `in_data` 保存到输出寄存器，并使用 `out_valid` 表示数据是否有效。只要缓冲为空，或者下游准备取走当前数据，模块就能接收下一笔输入（`rv_stage.v:15-25`）。
 
-## 2. Parameters and Build Configuration
+## 2. Parameters and Build Configuration（参数与编译配置）
 
 **Table 2-1 — Module Parameters**
 
-| Parameter | Default | Effective value | Constraint | Source |
+| Parameter | Default | Effective value | Meaning | RTL source |
 | --- | --- | --- | --- | --- |
-| `WIDTH` | 8 | 8 for this demonstration | Valid positive packed width assumed; not exhaustively checked | `rv_stage.v:2-10` |
+| `WIDTH` | 8 | 8 | 输入、输出数据总线宽度 | `rv_stage.v:2-4` |
 
-No VCS parameter elaboration was executed; actual variant coverage is not established.
+本示例采用源码默认参数 `WIDTH=8`。
 
-## 3. Port and Protocol Definition
+## 3. Port and Protocol Definition（端口与协议）
+
+模块有两侧 ready/valid 接口。上游在 `in_valid && in_ready` 成立的上升沿送入新数据；下游在 `out_valid && out_ready` 成立的上升沿取走旧数据。这两个动作可以在同一个上升沿发生（`rv_stage.v:15-25`）。
 
 **Table 3-1 — Module Ports**
 
-| Port | Dir. | Width/type | Domain | Reset/default | Cycle role | RTL source |
+| Port | Dir. | Width / type | Clock | Default | Meaning / sampling | RTL source |
 | --- | --- | --- | --- | --- | --- | --- |
-| `clk` | input | 1 | clk | N/A | Rising-edge capture | `rv_stage.v:5`, `rv_stage.v:17` |
-| `rst_n` | input | 1 | clk/async | active-low | Immediate reset assertion | `rv_stage.v:6`, `rv_stage.v:17` |
-| `in_data` | input | WIDTH | clk | external | Capture when input accepted and valid | `rv_stage.v:7`, `rv_stage.v:23` |
-| `in_valid` | input | 1 | clk | external | Pre-edge acceptance qualifier | `rv_stage.v:8`, `rv_stage.v:22` |
-| `in_ready` | output | 1 | clk | combinational | `!out_valid || out_ready` | `rv_stage.v:9`, `rv_stage.v:15` |
-| `out_data` | output | WIDTH | clk | 0 | Stored output data | `rv_stage.v:10`, `rv_stage.v:20-24` |
-| `out_valid` | output | 1 | clk | 0 | Stored output valid | `rv_stage.v:11`, `rv_stage.v:19-22` |
-| `out_ready` | input | 1 | clk | external | Downstream can consume slot | `rv_stage.v:12`, `rv_stage.v:15` |
+| `clk` | input | 1 | — | — | 寄存器上升沿时钟 | `rv_stage.v:5`, `rv_stage.v:17` |
+| `rst_n` | input | 1 | `clk` | 低有效 | 异步复位 | `rv_stage.v:6`, `rv_stage.v:17` |
+| `in_data` | input | `WIDTH` | `clk` | 上游提供 | 接收数据 | `rv_stage.v:7` |
+| `in_valid` | input | 1 | `clk` | 上游提供 | 输入有效 | `rv_stage.v:8` |
+| `in_ready` | output | 1 | `clk` | 组合计算 | 接收许可 | `rv_stage.v:9`, `rv_stage.v:15` |
+| `out_data` | output | `WIDTH` | `clk` | 0 | 寄存器输出数据 | `rv_stage.v:10` |
+| `out_valid` | output | 1 | `clk` | 0 | 输出有效 | `rv_stage.v:11` |
+| `out_ready` | input | 1 | `clk` | 下游提供 | 下游接收许可 | `rv_stage.v:12` |
 
-The interface is local ready/valid; it is not an AXI interface.
+## 4. Clock and Reset（时钟与复位）
 
-## 4. Clock and Reset
+`always @(posedge clk or negedge rst_n)` 描述了上升沿寄存器和异步低有效复位。`rst_n=0` 时，`out_valid` 和 `out_data` 都清零。复位无效后，只有满足 `in_ready=1` 的时钟沿才会更新寄存器（`rv_stage.v:17-25`）。
 
-The active event is `posedge clk`; `negedge rst_n` is also in the sensitivity list, making reset **asynchronous and active low** (`rv_stage.v:17`). During reset both data and valid are cleared (`rv_stage.v:18-20`). No deassertion synchronizer is present; system integration must handle reset release.
+## 5. State, Datapath and Register Behavior（状态与数据通路）
 
-## 5. State, Datapath and Register Behavior
+**Table 5-1 — Internal State and Registers**
 
-**Table 5-1 — Register State and Update Conditions**
-
-| Register | Width | Reset value | Update condition | RTL source |
+| Register | Width | Reset value | Update / hold | RTL source |
 | --- | --- | --- | --- | --- |
-| `out_valid` | 1 | 0 | If `in_ready`, assign `in_valid`; otherwise hold | `rv_stage.v:19`, `rv_stage.v:21-22` |
-| `out_data` | WIDTH | 0 | If `in_ready && in_valid`, assign `in_data`; otherwise hold | `rv_stage.v:20`, `rv_stage.v:21-24` |
+| `out_valid` | 1 | 0 | `in_ready=1` 时赋值为 `in_valid`；否则保持 | `rv_stage.v:19-22` |
+| `out_data` | `WIDTH` | 0 | `in_ready && in_valid` 时接收 `in_data`；否则保持 | `rv_stage.v:18-24` |
 
-A single registered occupancy bit represents empty/occupied behavior. No separately encoded FSM exists. Data and valid are governed by nonblocking assignments, so register updates become visible after the edge and use pre-edge input/state (`rv_stage.v:17-25`).
+模块没有显式 FSM。组合式 `in_ready = ~out_valid | out_ready` 决定能否更新输出寄存器（`rv_stage.v:15`）。因此缓冲有空、满两种状态，且可以在同一个上升沿输出旧数据并接收新数据。
 
-## 6. Functional and Cycle-Level Operation
+## 6. Functional and Cycle-Level Operation（功能与周期时序）
 
-**Cycle convention:** C0–C5 denote values *after* the timestamp of rising edges at 5, 15, 25, 35, 45 and 55 ns in a **hand-authored VCD parser fixture**. The table's transfer decisions depend on **pre-edge handshake**. The fixture is explanatory and is not a VCS simulation result (`rv_stage.v:15`, `rv_stage.v:17-24`).
+**Cycle convention:** 表中的输入条件取 `clk` 上升沿之前的状态；输出是该上升沿完成非阻塞赋值后的状态。
 
-**Table 6-1 — Cycle-Accurate Example**
+**Table 6-1 — Cycle-Accurate Transaction**
 
-| Cycle | Pre-edge inputs / handshake | State before → after | Post-edge output | RTL source |
+| Cycle | Inputs / pre-edge condition | State before → after | Outputs after edge | RTL source |
 | --- | --- | --- | --- | --- |
-| C0 | `rst_n=0` | reset → empty | `out_valid=0`, `out_data=0` | `rv_stage.v:17-20` |
-| C1 | `in_valid=1`, `in_data=A5`, `in_ready=1` | empty → A5 occupied | `out_valid=1`, `out_data=A5`, post `in_ready=0` | `rv_stage.v:15`, `rv_stage.v:21-24` |
-| C2 | `in_valid=1`, `out_ready=0`, `in_ready=0` | A5 occupied → A5 occupied | Holds A5 and valid | `rv_stage.v:15`, `rv_stage.v:21` |
-| C3 | `out_ready=1`, `in_valid=1`, `in_data=3C` | A5 occupied → 3C occupied | `out_valid=1`, `out_data=3C` | `rv_stage.v:15`, `rv_stage.v:21-24` |
-| C4 | `out_ready=1`, `in_valid=0` | 3C occupied → empty | `out_valid=0`, stale `out_data=3C` | `rv_stage.v:21-24` |
-| C5 | `in_valid=0` | empty → empty | unchanged | `rv_stage.v:21-24` |
+| C0 | `rst_n=0` | 复位 → 空 | `out_valid=0`, `out_data=0` | `rv_stage.v:17-20` |
+| C1 | `in_valid=1`, `in_ready=1`, `in_data=A5` | 空 → 满 | `out_valid=1`, `out_data=A5` | `rv_stage.v:15`, `rv_stage.v:21-24` |
+| C2 | `out_ready=0`, `in_ready=0` | 满 → 满 | A5 保持 | `rv_stage.v:15`, `rv_stage.v:21-25` |
+| C3 | `out_ready=1`, `in_valid=1`, `in_data=3C` | 满 → 满 | 旧数据被取走，新输出为 3C | `rv_stage.v:15`, `rv_stage.v:21-24` |
+| C4 | `out_ready=1`, `in_valid=0` | 满 → 空 | `out_valid=0`，数据保持 3C | `rv_stage.v:21-24` |
+| C5 | 无有效新数据 | 空 → 空 | 输出无效 | `rv_stage.v:21-24` |
 
-The data is registered on an accepted rising edge. With downstream always ready the stage can accept a word every edge; the output is visible after the acceptance edge, subject to valid. There is no multi-entry FIFO (`rv_stage.v:15-25`).
+连续使能且下游始终就绪时，模块每个上升沿都能接收一个数据字。单笔数据在接收上升沿后写入输出寄存器；缓冲满且下游未就绪时，吞吐率降为零（`rv_stage.v:15-25`）。
 
-## 7. Timing and Waveform Scenarios
+## 7. Timing and Waveform Scenarios（典型时序）
 
-**Figure 7-1 — Reset, acceptance, stall and replacement (ILLUSTRATIVE — NOT SIMULATED).**
+**Figure 7-1 — 接收、暂停与替换（RTL 推导）**
 
-![RTL-derived ready/valid timing](../waveforms/accept_stall_illustrative.svg)
+![rv_stage 接收与停顿波形](../waveforms/accept_stall_illustrative.svg)
 
-**Figure 7-2 — Handmade parser input, not a VCS trace (SYNTHETIC FIXTURE — NOT SIMULATED).**
+图中的 C1 接收 A5，C2 保持 A5，C3 允许下游取走 A5 的同时接收 3C，C4 清除有效标志。原始波形数据保存在 `../waveforms/accept_stall_illustrative.json5`（`rv_stage.v:15-25`）。
 
-![Handmade VCD timing fixture](../waveforms/fixture_trace.svg)
+## 8. Verification Evidence（验证记录）
 
-Waveform sources: `../waveforms/accept_stall_illustrative.json5` and `../waveforms/fixture_trace.json5`. They only show post-timestamp samples; a transfer at an edge cannot be inferred from a post-edge `valid && ready` pair without comparing pre-edge conditions (`rv_stage.v:15-25`).
+**Table 8-1 — Module Verification**
 
-## 8. Verification Evidence
+| Check | Tool / input | Artifact | Result |
+| --- | --- | --- | --- |
+| RTL 接口与寄存器检查 | 源码分析 | `rv_stage.v:2-27` | 已分析 |
+| 时序图生成 | WaveDrom 子集渲染器 | `accept_stall_illustrative.svg` | 已生成（RTL 推导） |
+| VCD 解析器单测 | 人工构造的 `fixture.vcd` | `fixture_trace.svg` | 解析测试通过 |
+| 功能仿真与波形调试 | VCS / Verdi | — | 未执行 |
 
-**Table 8-1 — Module Verification Matrix**
+## 9. RTL Traceability and Open Issues（源码追溯与待确认事项）
 
-| Check | Tool | Observed evidence | Result | Limits |
-| --- | --- | --- | --- | --- |
-| Register update review | RTL analysis | `rv_stage.v:17-25` | Source-derived only | Not simulator proven |
-| SVG rendering | Local renderer | `accept_stall_illustrative.svg` | Diagram generated | Illustration only |
-| Parser exercise | VCD converter | Handwritten `fixture.vcd` | Parsing exercise | Synthetic input |
-| Licensed simulator/debug | Synopsys VCS + Verdi | NOT RUN | UNVERIFIED | No FSDB/log/run manifests |
-
-A future self-checking VCS testbench must independently assert backpressure hold, transfer replacement and valid behavior; Verdi may then examine actual FSDB events.
-
-## 9. RTL Traceability and Open Issues
-
-- `rv_stage.v:2` — module declaration and WIDTH.
-- `rv_stage.v:5-12` — input/output ports.
-- `rv_stage.v:15` — in_ready equation.
-- `rv_stage.v:17-25` — reset and state updates.
-- Open: VCS/Verdi not run, alternative parameters not elaborated, no reset-release integration verification, no timing closure data.
+- `rv_stage.v:2-4` — 模块声明和参数。
+- `rv_stage.v:5-12` — 全部外部端口。
+- `rv_stage.v:15` — `in_ready` 组合条件。
+- `rv_stage.v:17-25` — 复位、接收和保持逻辑。
+- 待确认：`WIDTH` 非默认配置的编译结果，以及 VCS 连续传输和复位覆盖测试。

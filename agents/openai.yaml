@@ -1,4 +1,4 @@
 interface:
-  display_name: "RTL to Formal IP Spec"
-  short_description: "Document RTL as a formal IP Spec using VCS + Verdi"
-  default_prompt: "Use $rtl-to-spec to read my RTL without modifying it, produce a revision-controlled formal IP Specification with numbered chapters, port/register tables, source-line citations, cycle-accurate WaveDrom figures, and Synopsys VCS/Verdi evidence when available. Do not claim EDA passes unless actually run and checked."
+  display_name: "RTL → 清晰易读的 IP Spec"
+  short_description: "从 RTL 生成清晰的中文 IP 规格，支持 VCS + Verdi"
+  default_prompt: "使用 $rtl-to-spec 阅读当前 RTL，写一份工程师容易理解的正式中文 IP Specification。先解释实际功能和时钟周期行为，再给接口、状态、时序图及源码引用。VCS/Verdi 验证状态集中记录在验证章节，避免重复免责声明和机器套话。不要修改 RTL。"

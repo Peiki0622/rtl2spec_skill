@@ -1,14 +1,14 @@
-# Formal IP Specification contract (v0.2)
+# Formal IP Specification contract (v0.3)
 
-The output is a **controlled, implementation-grounded technical document** suitable for design review and external IP hand-off after review/approval. A generated Markdown document is **not automatically an approved specification**, a sign-off artifact or a substitute for verification.
+The output is a **controlled, implementation-grounded IP specification**. Write the technical content for engineers first; collect review and verification status in their designated chapters. See [writing-style-zh.md](writing-style-zh.md) for the default prose style.
 
 ## 1. Output profiles and template stability
 
 - IP deliverable: `ip_spec.md`; per-module deliverable: `modules/<module>.md`. Use `assets/templates/ip_spec.md` and `module_spec.md` respectively.
-- Follow exact **numbered English level-2 headings** and the supplied order, even when the explanatory prose is Chinese. Required IP chapters 1–13 and Appendices A–B; module chapters 1–9. Include a revision-history table, document metadata, and explicit review/approval status. Do not invent authors, revisions, tool versions, clock frequencies, or approved release claims.
-- Use `**Table X-Y — Title**` immediately before every important table and `**Figure X-Y — Title**` next to architecture, FSM and timing diagrams. Number consecutively within each chapter; use relative document hyperlinks and nonbroken `.svg` images. A waveform requires a figure caption and a cycle-by-cycle explanation; an illustration alone is not a timing contract.
-- `N/A` requires a reason and implementation evidence (e.g., no memory-mapped interface); avoid hallucinating unused register-map chapters into invented registers. Unresolved topics remain in Open Issues and document status stays DRAFT or UNDER REVIEW.
-- The `validate.py --strict` validator checks format, citations and source snapshot integrity; it does **not** certify truthfulness, design correctness or release approval. Use `--release` for extra evidence/document-state gates; it never automatically approves a document.
+- Follow numbered level-2 headings and the supplied order. Keep English chapter keys for stable validation; append a concise Chinese subtitle in full-width parentheses when writing Chinese (e.g., `## 8. Functional Operation（工作原理）`). Required IP chapters 1–13 and Appendices A–B; module chapters 1–9. Include document metadata, revision history and review state. Unknown values stay unknown instead of being invented.
+- Use `**Table X-Y — Title**` immediately before every important table and `**Figure X-Y — Title**` next to architecture, FSM and timing diagrams. Number consecutively within each chapter; use relative document hyperlinks and nonbroken `.svg` images. Each important waveform needs its figure caption and a clear cycle-by-cycle explanation.
+- `N/A` requires a brief reason and implementation evidence (e.g., no memory-mapped interface). Record concrete unresolved topics in Open Issues.
+- Run `style_lint.py --strict` for high-confidence prose problems and `validate.py --strict` for format, source citations and snapshot integrity. An authorized reviewer decides release state.
 
 ## 2. Source-grounded design analysis
 
@@ -49,12 +49,18 @@ Analyze each module: declared ports/widths and timing, reset async vs sync, pola
 
 Identify **actual** reset, normal transaction, start/done, consecutive operations, backpressure, stall, flush, error, timeout, invalid input, or CDC scenarios **only if present in this RTL**. Each important supported operation gets: (a) scenario ID and objective, (b) initial conditions and inputs, (c) referenced RTL lines, (d) cycle sample semantics, (e) WaveDrom SVG plus numbered figure, (f) transaction table, (g) evidence label and VCS/Verdi artifact/log if verified. Ensure every state/latency/handshake statement uses pre-edge vs post-NBA definitions consistently.
 
-Use two labels, never conflate:
-- `ILLUSTRATIVE — NOT SIMULATED`: Agent derives timing from RTL; Markdown and WaveDrom JSON/SVG.
-- `VCS/VERDI OBSERVED — NOT AUTOMATICALLY VERIFIED`: VCS produced FSDB, Verdi inspected or `fsdb2vcd` exported it; converter read the observed VCD. VCS run manifest, FSDB hash, exported VCD hash, sampling interval and selected signals must be linked. A hand-authored fixture is `SYNTHETIC TEST FIXTURE`, never a simulation observation.
+Use short, honest figure labels:
+- **RTL 推导**: example waveform derived from source code; keep `ILLUSTRATIVE` as the internal evidence class.
+- **VCS/Verdi 波形**: FSDB recorded by VCS and exported via Verdi `fsdb2vcd`; save manifests and source hashes in the evidence table/sidecar.
+- **测试夹具**: hand-authored VCD for parser tests, not a simulator trace.
+Do not repeat evidence disclaimers in each narrative paragraph.
 
 ## 4. Evidence and release status
 
-Use explicit evidence levels: `RTL-DERIVED` (manual/agent code reasoning), `TOOL-ELABORATED` (recorded VCS compile/elaboration), `ILLUSTRATIVE`, `VCS/VERDI OBSERVED`, `SIMULATION-PASS` (recorded self-checking tests with checked criteria), `FORMALLY-PROVEN` (real proof and assumptions). Simulator exit=0, FSDB existence, Verdi screenshot, and diagram matching alone **do not** prove functional correctness.
+Use explicit evidence levels: `RTL-DERIVED` (manual/agent code reasoning), `TOOL-ELABORATED` (recorded VCS compile/elaboration), `ILLUSTRATIVE`, `VCS/VERDI OBSERVED`, `SIMULATION-PASS` (recorded self-checking tests with checked criteria), `FORMALLY-PROVEN` (real proof and assumptions). Only use `SIMULATION-PASS` when self-checking test conditions are recorded and checked.
 
-`DRAFT` and `UNDER REVIEW` are possible without proprietary tools if gaps are disclosed. `RELEASED` must be explicitly approved by authorized humans, with RTL revision, build, evidence, documentation and reproducibility reconciled; the skill shall never set RELEASED by itself. For proprietary or undisclosed content, do not upload RTL/waveforms to external services.
+`DRAFT` and `UNDER REVIEW` are valid document states. `RELEASED` requires actual reviewer approval and reconciled configuration/evidence. Keep proprietary RTL and waves within the project environment.
+
+## 5. Readability acceptance
+
+In chapters 3, 6, 8 and 9, a reader should understand the module purpose, input acceptance rule, clock-edge behavior and output validity without needing to read Verilog. Put the important engineering condition close to the relevant behavior. Avoid repeating VCS/Verdi availability statements outside the verification chapter; write the status once in the evidence table. Retain exact file-line citations, tables, waveforms and figures.

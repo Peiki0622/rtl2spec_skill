@@ -14,12 +14,14 @@ Start with reset assertion/release, first transaction, normal completion, consec
 
 Output strict JSON (subset of WaveDrom JSON5) with one `signal` row per selected trace; wave symbol subset `0`, `1`, `x`, `z`, `=`, `.`, `p`, and bus `data` labels. Render offline with `scripts/render_wavedrom.py`. For advanced WaveDrom effects use a separately licensed/installed official renderer rather than claiming this subset implements all JSON5 syntax.
 
-Every figure requires `**Figure 9-n — ...**` (IP) or `**Figure 7-n — ...**` (module), embedded SVG, scenario purpose and input sequence, source citation, cycle table and provenance:
+Every figure requires `**Figure 9-n — ...**` (IP) or `**Figure 7-n — ...**` (module), an SVG, scenario purpose, source citation and cycle table. **Show short labels to readers**; preserve the machine-readable evidence status in the verification chapter and metadata:
 
-- `ILLUSTRATIVE — NOT SIMULATED`: derived from RTL only. Always available after careful source analysis.
-- `VCS/VERDI OBSERVED — NOT A CORRECTNESS PROOF`: trace from an actual VCS FSDB run exported with Verdi `fsdb2vcd` and checked manifest chain. Log simulator command, filelist, FSDB/VCD hash, observed signal mapping, VCD timescale and sampling convention.
-- `VCD OBSERVED — FILE SOURCE NOT AUTHENTICATED`: optional imported VCD without both VCS+Verdi manifests; must not claim VCS execution.
-- `SYNTHETIC FIXTURE — NOT A SIMULATION`: parser-only tests.
+- **RTL 推导** (`ILLUSTRATIVE`): timing derived from the current RTL.
+- **VCS/Verdi 波形** (`VCS/VERDI-OBSERVED`): actual FSDB recorded by VCS, exported with Verdi and checked against conversion manifests.
+- **VCD 观测** (`VCD-OBSERVED`): a VCD input without complete VCS/Verdi provenance.
+- **测试夹具** (`SYNTHETIC TEST FIXTURE`): synthetic VCD used for parser tests.
+
+Skip lengthy reassurance/denial in the body. Capture command, FSDB/VCD hashes, sampling convention and test result in chapter 12.
 
 **Example of a simple illustrative diagram:**
 
@@ -31,7 +33,7 @@ Every figure requires `**Figure 9-n — ...**` (IP) or `**Figure 7-n — ...**` 
     {"name": "req", "wave": "0.10.."},
     {"name": "state", "wave": "=.=..=", "data": ["IDLE", "BUSY", "IDLE"]}
   ],
-  "head": {"text": "ILLUSTRATIVE — NOT SIMULATED"}
+  "head": {"text": "示例时序 · RTL 推导"}
 }
 ```
 
@@ -43,4 +45,4 @@ With FSDB converted to VCD, use `vcd_to_wavedrom.py` and **both** `--verdi-manif
 
 ## Final document gate
 
-Strict formatting check: `validate.py --strict`, including section numbers, document metadata, revision history, figure captions, file:line citations, SVG links and RTL snapshot hash. `--release` additionally checks evidence manifests and human-marked document Status; it **does not** produce an approval or sign-off. Humans must review function, coverage, legal/confidentiality classification, quality of VCS testbench checkers and Verdi waveform interpretation.
+Run `style_lint.py --strict` for prose and `validate.py --strict` for formatting, including section numbers, document metadata, revision history, figure captions, file:line citations, SVG links and RTL snapshot hash. `--release` additionally checks evidence manifests and human-marked document Status; it **does not** produce an approval or sign-off. Humans must review function, coverage, legal/confidentiality classification, quality of VCS testbench checkers and Verdi waveform interpretation.

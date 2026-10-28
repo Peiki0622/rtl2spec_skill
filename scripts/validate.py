@@ -60,7 +60,7 @@ def validate(root: Path, docs: Path, inventory_path: Path, strict: bool, release
             if not re.search(r'^\*\*Table 1-1\s+—\s+Revision History\*\*', txt, flags=re.M):
                 errors.append('ip_spec.md: missing numbered Revision History table')
         for heading in required:
-            if not re.search(r'^##\s+' + re.escape(heading) + r'\s*$', txt, flags=re.M):
+            if not re.search(r'^##\s+' + re.escape(heading) + r'(?:（[^）]+）)?\s*$', txt, flags=re.M):
                 errors.append(f'{doc.name}: missing heading ## {heading}')
         valid_refs = 0
         for m in EVIDENCE.finditer(txt):
@@ -113,11 +113,11 @@ def validate(root: Path, docs: Path, inventory_path: Path, strict: bool, release
         heading = data.get('head', {}).get('text', '').upper()
         if meta.is_file():
             m = json.loads(meta.read_text())
-            if m.get('provenance', '').startswith('VCD-OBSERVED') and 'VCD OBSERVED' not in heading:
+            if m.get('provenance', '').startswith('VCD-OBSERVED') and not any(v in heading for v in ('VCD OBSERVED', 'VCD 观测')):
                 errors.append('VCD metadata present but wave label not VCD OBSERVED: ' + wave.name)
-            if m.get('provenance', '').startswith('VCS/VERDI-OBSERVED') and 'VCS/VERDI OBSERVED' not in heading:
+            if m.get('provenance', '').startswith('VCS/VERDI-OBSERVED') and not any(v in heading for v in ('VCS/VERDI OBSERVED', 'VCS/VERDI 仿真波形', 'VCS/VERDI 波形')):
                 errors.append('Verdi provenance present but wave label does not match: ' + wave.name)
-        elif not ('ILLUSTRATIVE' in heading or 'VCD OBSERVED' in heading):
+        elif not any(v in heading for v in ('ILLUSTRATIVE', 'RTL 推导', 'VCD OBSERVED', 'VCD 观测')):
             errors.append('waveform missing explicit origin/provenance label: ' + wave.name)
         checks.append(f'waveform parsed: {wave.name}')
     if strict and (docs / 'ip_spec.md').is_file():
@@ -150,7 +150,7 @@ def validate(root: Path, docs: Path, inventory_path: Path, strict: bool, release
     report = {'status': 'FAIL' if errors else 'PASS', 'mode': 'release' if release else 'strict' if strict else 'draft',
               'docs': str(docs.resolve()), 'errors': errors, 'warnings': warnings,
               'checks': checks,
-              'disclaimer': 'Lint checks structure and file-line existence; not functional correctness.'}
+              'scope': 'Static document structure, citation paths, wave data and source hashes.'}
     return report
 
 

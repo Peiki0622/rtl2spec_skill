@@ -3,156 +3,158 @@
 | Document field | Value |
 | --- | --- |
 | Document ID | DEMO-RV-001 |
-| IP Name | rv_stage (ready/valid register stage) |
+| IP Name | rv_stage（单级 ready/valid 缓冲） |
 | Top Module | `rv_stage` |
-| Revision | 0.2-demo |
-| Status | DRAFT — example only; not approved for release |
+| Revision | 0.3-demo |
+| Status | DRAFT |
 | Classification | Public demonstration |
 | Date | 2026-10-28 |
-| RTL Source Revision | `examples/demo_output/inventory.json`, SHA256 source snapshot |
-| Configuration ID | `WIDTH=8`, `examples/tiny_ip/rtl.f`, source-only review |
-| Author / Reviewer / Approver | Demo content / Not assigned / Not approved |
+| RTL Source Revision | `examples/demo_output/inventory.json` 所记录的源码哈希 |
+| Configuration ID | `WIDTH=8`，`examples/tiny_ip/rtl.f` |
+| Author / Reviewer / Approver | 示例文档 / 未指定 / 未指定 |
 
-> **Design/evidence notice:** RTL-DERIVED. Synopsys VCS/Verdi were **NOT RUN**. Included VCD was handmade solely for converter tests. No functional verification has been performed.
-
-## 1. Document Control
+## 1. Document Control（文档信息）
 
 **Table 1-1 — Revision History**
 
-| Rev. | Date | Description | Author | Approval |
+| Rev. | Date | Changes | Author | Review status |
 | --- | --- | --- | --- | --- |
-| 0.2-demo | 2026-10-28 | Adapted one-slot ready/valid RTL into formal controlled Spec layout | Demo content | Not reviewed |
+| 0.3-demo | 2026-10-28 | 更新中文表述，保留接口与时序依据 | 示例文档 | DRAFT |
 
-No reviewer/approver is assigned. Distribution is limited to this public demonstration. Status is DRAFT.
+## 2. Scope and References（适用范围）
 
-## 2. Scope and References
+本文描述单模块 `rv_stage` 在 `WIDTH=8` 配置下的行为。输入输出接口见第 6 章；寄存器更新规则见第 8 章；典型传输过程见第 9 章。代码范围为 `rv_stage.v:2-27`。
 
-This document covers only the single module `rv_stage` at `WIDTH=8`. It is a source-derived description, *not* an external ready/valid protocol conformance certificate. Source of truth: `rv_stage.v:2-27` and corresponding inventory file. External clock frequency, physical setup/hold and system-level CDC are excluded.
+## 3. IP Overview and Features（功能概述）
 
-## 3. IP Overview and Features
+`rv_stage` 在上下游之间提供一个寄存器缓冲位置。上游使用 `in_valid/in_ready` 提交数据，下游使用 `out_valid/out_ready` 接收数据。当缓冲位置为空，或下游正在取走旧数据时，模块可以在当前时钟沿接收新数据；当下游不接收时，模块保持已经保存的数据。缓冲深度为 1，不包含多级 FIFO（`rv_stage.v:15-25`）。
 
-`rv_stage` is a one-entry registered staging element for ready/valid data. It accepts input when the output slot is empty or downstream consumes the old word; it holds the output data during stall (`rv_stage.v:15-25`). There are no start/done pins, interrupts, register bus or encrypted datapath in this module.
-
-## 4. Configuration and Deliverables
+## 4. Configuration and Deliverables（配置与交付内容）
 
 **Table 4-1 — Analyzed Configuration**
 
-| Item | Effective value | Source / qualification |
+| Item | Effective value | Source |
 | --- | --- | --- |
 | DUT top | `rv_stage` | `rv_stage.v:2` |
-| Width parameter | `WIDTH=8` (default) | `rv_stage.v:2-10` |
-| Clock | Single `clk` rising edge | `rv_stage.v:17` |
-| Filelist | `rtl.f` containing `rv_stage.v` | Lexical inventory only |
-| EDA | Synopsys VCS + Verdi | NOT RUN; no vendor logs or FSDB available |
+| Data width | `WIDTH=8`，默认值为 8 | `rv_stage.v:2-4` |
+| Source filelist | `rtl.f` → `rv_stage.v` | `rv_stage.v:2` |
+| Simulation / debug tools | Synopsys VCS / Verdi | 执行情况见第 12 章 |
 
-Deliverables for this demonstration are `ip_spec.md`, `modules/rv_stage.md`, source inventory and WaveDrom/SVG illustrations. No IP synthesis or EDA sign-off package is included.
+本示例交付 IP Spec、模块 Spec、源码索引和 WaveDrom/SVG 时序图。
 
-## 5. Architecture and Hierarchy
+## 5. Architecture and Hierarchy（整体架构）
 
-A single registered stage connects input handshake, an occupancy bit and output storage; there are no submodule instances (`rv_stage.v:2-27`). The figure is a conceptual data/control flow consistent with source logic, not a routed netlist.
+该 IP 只有一个模块实例。输入握手控制是否更新 `out_valid` 和 `out_data` 寄存器，寄存器输出直接连接下游接口。`in_ready` 是组合信号，由当前 `out_valid` 和下游的 `out_ready` 共同决定（`rv_stage.v:15-25`）。
 
 ```mermaid
 flowchart LR
-  I[Input data and valid] --> R[rv_stage: out_data/out_valid registers]
-  D[Downstream ready] --> R
-  R --> O[Output data and valid]
-  R --> U[Combinational input ready]
+  A[上游 in_valid / in_data] --> B[输入接收控制]
+  C[下游 out_ready] --> B
+  B --> D[out_valid / out_data 寄存器]
+  D --> E[下游 out_valid / out_data]
+  D --> F[in_ready 组合逻辑]
+  C --> F
+  F --> A
 ```
 
-**Figure 5-1 — Register-stage architectural data flow (RTL-DERIVED).**
+**Figure 5-1 — 单级 ready/valid 缓冲结构**
 
-## 6. External Interface Specification
+## 6. External Interface Specification（外部接口）
+
+上游在 `clk` 上升沿检查 `in_valid && in_ready`，条件成立时交付一个数据字。下游在 `out_valid && out_ready` 同时为高的上升沿取走输出数据。`in_ready` 为低时，不接收新数据（`rv_stage.v:15-25`）。
 
 **Table 6-1 — Top-Level Signal Definitions**
 
-| Signal | Direction | Width | Clock domain | Reset / default | Meaning | Cycle and handshake | RTL source |
+| Signal | Direction | Width | Clock | Reset/default | Meaning | Timing / condition | RTL source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `clk` | input | 1 | clk | N/A | Single capture clock | Rising edge | `rv_stage.v:5`, `rv_stage.v:17` |
-| `rst_n` | input | 1 | clk/reset | active-low | Asynchronous reset | Assert without edge | `rv_stage.v:6`, `rv_stage.v:17` |
-| `in_data` | input | WIDTH=8 | clk | external | Input word | Capture on accepted valid input | `rv_stage.v:7`, `rv_stage.v:21-24` |
-| `in_valid` | input | 1 | clk | external | Input valid | Accepted when `in_ready=1` pre-edge | `rv_stage.v:8`, `rv_stage.v:22` |
-| `in_ready` | output | 1 | clk | combinational | Input acceptance readiness | `!out_valid || out_ready` | `rv_stage.v:9`, `rv_stage.v:15` |
-| `out_data` | output | WIDTH=8 | clk | 0 | Registered data word | Meaningful when `out_valid=1` | `rv_stage.v:10`, `rv_stage.v:18-24` |
-| `out_valid` | output | 1 | clk | 0 | Slot occupied | Registered; holds during stall | `rv_stage.v:11`, `rv_stage.v:19-22` |
-| `out_ready` | input | 1 | clk | external | Consumer readiness | Can clear/replace slot at edge | `rv_stage.v:12`, `rv_stage.v:15` |
+| `clk` | input | 1 | — | — | 工作时钟 | 上升沿更新寄存器 | `rv_stage.v:5`, `rv_stage.v:17` |
+| `rst_n` | input | 1 | `clk` | 低有效 | 复位 | 下降沿即可触发 | `rv_stage.v:6`, `rv_stage.v:17` |
+| `in_data` | input | 8 | `clk` | 上游提供 | 输入数据 | 输入握手成立时采样 | `rv_stage.v:7`, `rv_stage.v:23-24` |
+| `in_valid` | input | 1 | `clk` | 上游提供 | 输入有效 | 与 `in_ready` 同时为 1 才接收 | `rv_stage.v:8`, `rv_stage.v:21-22` |
+| `in_ready` | output | 1 | `clk` | 组合计算 | 可以接收新数据 | `!out_valid \| out_ready` | `rv_stage.v:9`, `rv_stage.v:15` |
+| `out_data` | output | 8 | `clk` | 0 | 寄存器输出的数据 | `out_valid=1` 时有效 | `rv_stage.v:10`, `rv_stage.v:18-24` |
+| `out_valid` | output | 1 | `clk` | 0 | 输出有效标志 | 空缓冲为 0，有数据为 1 | `rv_stage.v:11`, `rv_stage.v:19-22` |
+| `out_ready` | input | 1 | `clk` | 下游提供 | 下游准备接收 | 决定旧数据能否在当前沿取走 | `rv_stage.v:12`, `rv_stage.v:15` |
 
-There is no complete AXI bus implementation or address/control handshake in `rv_stage.v:2-27`. Ports implement this module's local ready/valid contract.
-
-## 7. Clocks, Resets and CDC
+## 7. Clocks, Resets and CDC（时钟与复位）
 
 **Table 7-1 — Clock/Reset Summary**
 
-| Name | Domain | Frequency | Edge/polarity | Synchrony | State / RTL evidence |
+| Name | Domain | Frequency / condition | Edge / active level | Behavior | RTL source |
 | --- | --- | --- | --- | --- | --- |
-| `clk` | only data domain | externally specified / unknown | posedge | synchronous capture | `rv_stage.v:17-25` |
-| `rst_n` | asynchronous reset | N/A | active low | asynchronously asserted; release not synchronized here | clears `out_valid` and `out_data`, `rv_stage.v:17-20` |
+| `clk` | 唯一数据时钟域 | 由上层系统提供 | 上升沿 | 更新输出寄存器 | `rv_stage.v:17-25` |
+| `rst_n` | 异步复位 | 低有效 | 下降沿有效 | 将 `out_valid`、`out_data` 清零 | `rv_stage.v:17-20` |
 
-No clock crossing exists within this one-clock module. Timing closure and reset deassertion constraints must be handled by integration.
+复位有效时，缓冲位置为空，组合信号 `in_ready` 随 `out_valid=0` 变为 1。复位释放后，输出寄存器在满足接收条件的时钟上升沿更新。模块内部没有跨时钟域路径（`rv_stage.v:15-25`）。
 
-## 8. Functional Operation
+## 8. Functional Operation（工作原理）
 
-The combinational `in_ready` equation is `!out_valid || out_ready` (`rv_stage.v:15`). At each non-reset rising edge with `in_ready=1`, `out_valid <= in_valid`; if `in_valid=1`, `out_data <= in_data`. Under stall (`out_valid=1 && out_ready=0`), both registered outputs hold (`rv_stage.v:21-25`). An accepted idle bubble clears the valid bit but preserves stale data, whose bits are ignored while invalid.
+`in_ready = ~out_valid | out_ready`，因此空缓冲可以接收数据；缓冲已满时，只有下游准备接收，才允许新数据替换旧数据（`rv_stage.v:15`）。
 
-## 9. Timing and Waveform Scenarios
+在上升沿且 `in_ready=1` 时，`out_valid` 更新为 `in_valid`。如果 `in_valid=1`，`out_data` 同时采样 `in_data`。若 `in_ready=0`，两个寄存器都保持不变。若 `in_ready=1` 且 `in_valid=0`，`out_valid` 清零，但 `out_data` 保留原值；此时旧数据不再有效（`rv_stage.v:17-25`）。
+
+## 9. Timing and Waveform Scenarios（时序与波形）
 
 **Table 9-1 — Timing Scenario Coverage**
 
-| Scenario ID | Trigger | Expected behavior | Waveform | Provenance | Verified? |
+| Scenario | Start condition | Key behavior | Figure | Source | Verification |
 | --- | --- | --- | --- | --- | --- |
-| T-01 | reset→accepted word→stall→replacement→drain | output valid/data hold under stall | `waveforms/accept_stall_illustrative.svg` | ILLUSTRATIVE | NOT SIMULATED |
-| T-02 | predefined VCD parser fixture | edge-sampled trace extraction | `waveforms/fixture_trace.svg` | SYNTHETIC FIXTURE | NOT SIMULATED |
+| T-01 | 复位结束后输入 A5，随后下游暂停接收 | 保存 A5 → 等待 → 用 3C 替换 → 清空 | `waveforms/accept_stall_illustrative.svg` | RTL 推导 | 第 12 章 |
 
-**Figure 9-1 — Source-derived reset, stall and replacement timing (ILLUSTRATIVE — NOT SIMULATED).**
+上升沿前的 `in_valid`、`in_ready` 决定输入是否被接收。沿后的 `out_valid`、`out_data` 是寄存器更新结果。暂停期间，`out_ready=0` 且缓冲已满，数据保持不变（`rv_stage.v:15-25`）。
 
-![Illustrative cycle timing](waveforms/accept_stall_illustrative.svg)
+**Table 9-2 — 单次传输与停顿周期表**
 
-**Figure 9-2 — Handmade VCD fixture parsed into a timing diagram (SYNTHETIC FIXTURE — NOT SIMULATED).**
+| Cycle | 沿前输入/下游状态 | 沿后输出 | 解释 |
+| --- | --- | --- | --- |
+| C0 | `rst_n=0` | `out_valid=0`, `out_data=0` | 复位清空缓冲 |
+| C1 | `in_valid=1`, `in_data=A5`, `in_ready=1` | `out_valid=1`, `out_data=A5` | 接收 A5 |
+| C2 | `out_ready=0`, `in_ready=0` | 保持 A5 | 下游暂停 |
+| C3 | `out_ready=1`, `in_valid=1`, `in_data=3C` | `out_valid=1`, `out_data=3C` | 取走旧数据并写入新数据 |
+| C4 | `out_ready=1`, `in_valid=0` | `out_valid=0`, `out_data=3C` | 标记为空，数据寄存器不清零 |
+| C5 | 无新输入 | 保持空状态 | 等待下一笔传输 |
 
-![Synthetic parser fixture](waveforms/fixture_trace.svg)
+**Figure 9-1 — 输入接收、停顿与替换时序（RTL 推导）**
 
-The cycle table and source-code edge semantics are specified in [Module Design Specification, chapter 6](modules/rv_stage.md#6-functional-and-cycle-level-operation). Values in the diagrams are *post-timestamp* values; input handshake is established by **pre-edge** values (`rv_stage.v:15`, `rv_stage.v:21-25`). No Verdi FSDB was generated.
+![输入接收与停顿波形](waveforms/accept_stall_illustrative.svg)
 
-## 10. Register and Memory Map
+## 10. Register and Memory Map（寄存器与存储器）
 
-**N/A — no software-visible register interface.** The module exposes only ready/valid datapath signals (`rv_stage.v:5-12`); `out_valid` and `out_data` are internal state elements reflected on output pins and do not have memory-mapped addresses (`rv_stage.v:17-24`). Internal register behavior is specified in the module document.
+N/A：本模块只有数据接口，没有软件可访问的寄存器地址空间。内部的 `out_data` 和 `out_valid` 寄存器在模块 Spec 中列出（`rv_stage.v:5-12`, `rv_stage.v:17-24`）。
 
-## 11. Exceptions, Constraints and Integration
+## 11. Exceptions, Constraints and Integration（异常与集成要求）
 
-Integration must honor pre-edge ready/valid acceptance and distinguish output validity from stale bits. There is no local reset-release synchronizer, error register, programmable timeout, flush port or interrupt logic (`rv_stage.v:5-25`). Clock frequency, physical timing and external CDC integration are beyond the RTL evidence.
+上游必须在每次传输的时钟上升沿满足 `in_valid && in_ready`。当缓冲已满且 `out_ready=0` 时，新输入不会被采样；上游应继续保持待传数据。复位时模块会清空正在保存的数据。复位释放的系统级同步要求由集成环境负责（`rv_stage.v:15-25`）。
 
-## 12. Verification and Evidence
+## 12. Verification and Evidence（验证记录）
 
 **Table 12-1 — Verification Evidence Matrix**
 
-| Evidence ID | Check | Tool | Command / condition | Artifact | Result |
+| Evidence ID | Check | Tool | Input / condition | Artifact | Result |
 | --- | --- | --- | --- | --- | --- |
-| VE-01 | Source inventory | Python index | `scripts/inventory.py` | `inventory.json` | Source-only candidate index |
-| VE-02 | Waveform rendering | Python SVG renderer | `scripts/render_wavedrom.py` | `waveforms/accept_stall_illustrative.svg` | Illustration produced |
-| VE-03 | Synthetic VCD parser | Python converter | Sample fixture | `waveforms/fixture_trace.svg` | Parser demonstration only |
-| VE-04 | RTL compile, TB simulation, FSDB debug | Synopsys VCS + Verdi | NOT RUN | No VCS/Verdi manifests | UNVERIFIED |
+| VE-01 | 端口与源码索引 | Python | `rtl.f` | `inventory.json` | 已生成 |
+| VE-02 | 示例时序渲染 | WaveDrom 子集渲染器 | T-01 | `waveforms/accept_stall_illustrative.svg` | 已生成（RTL 推导） |
+| VE-03 | VCD 解析器单元测试 | Python | 人工构造的 `fixture.vcd` | `waveforms/fixture_trace.svg` | 解析测试通过 |
+| VE-04 | RTL 编译与功能仿真 | Synopsys VCS | — | — | 未执行 |
+| VE-05 | FSDB 调试与导出 | Synopsys Verdi | — | — | 未执行 |
 
-The hand-authored VCD fixture is **not** simulator evidence. Neither a self-checking testbench nor a genuine vendor run exists for this example. No simulation PASS is claimed.
+## 13. Traceability and Open Issues（源码追溯与待确认事项）
 
-## 13. Traceability and Open Issues
+**Table 13-1 — Spec-to-RTL Traceability**
 
-**Table 13-1 — Design-to-RTL Traceability**
-
-| Clause | Claim | RTL reference | Tool evidence | Status |
+| Clause | Behavior | RTL source | Verification evidence | Open item |
 | --- | --- | --- | --- | --- |
-| 6 | Interface ports | `rv_stage.v:5-12` | none | RTL-DERIVED |
-| 7 | Async reset | `rv_stage.v:17-20` | none | RTL-DERIVED |
-| 8 | Ready/valid and hold | `rv_stage.v:15`, `rv_stage.v:21-25` | none | RTL-DERIVED |
-| 9 | Cycle example | `rv_stage.v:15-25` | synthetic fixture only | ILLUSTRATIVE |
+| 6 | 顶层接口定义 | `rv_stage.v:5-12` | 源码索引 | — |
+| 7 | 异步复位 | `rv_stage.v:17-20` | RTL 分析 | 复位释放策略由系统决定 |
+| 8 | 输入握手及寄存器保持 | `rv_stage.v:15-25` | RTL 分析 | — |
+| 9 | 暂停与数据替换 | `rv_stage.v:15-25` | RTL 推导波形 | 待 VCS 仿真覆盖 |
 
-Open issues: no VCS/Verdi execution; not checked for alternative parameter values or clock/reset electrical constraints. No claim of formal correctness or sign-off.
+## Appendix A. Module Index（模块索引）
 
-## Appendix A. Module Index
+- [rv_stage 模块设计说明](modules/rv_stage.md) — `rv_stage.v:2`
 
-- [rv_stage Design Specification](modules/rv_stage.md) — `rv_stage.v:2`
+## Appendix B. Glossary（术语）
 
-## Appendix B. Glossary
-
-- **DUT:** Design Under Test.
-- **FSDB:** Fast Signal Database used by Synopsys Verdi.
-- **NBA:** Nonblocking Assignment scheduling in Verilog/SystemVerilog.
-- **ready/valid:** Local transfer protocol; a transfer is evaluated at the clock edge with input valid and readiness asserted beforehand.
+- **ready/valid**：源端报告数据有效、接收端报告可接收的握手方式。
+- **FSDB**：Verdi 使用的波形数据库格式。
+- **RTL**：寄存器传输级硬件描述。
